@@ -1,0 +1,430 @@
+.lifecycle-bar-chart {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface-bg, #ffffff);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.lifecycle-bar-chart__table {
+  margin-top: var(--space-4);
+  padding-top: 0;
+  overflow-x: auto;
+  background-color: var(--surface-bg, #ffffff);
+}
+
+.lifecycle-bar-chart__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.lifecycle-bar-chart__title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.lifecycle-bar-chart__plot {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: minmax(160px, 1fr) auto auto;
+  /* No column gap: x-axis meets y-axis at origin; horizontal line starts right of “0”. */
+  gap: 0;
+  align-items: stretch;
+  min-height: 220px;
+  /* Inset plot so first/last bars are not flush with y-axis or right edge. */
+  --chart-plot-inset: var(--space-4);
+  /* Bar columns + x-labels share the same gap (Harmony spacing scale). */
+  --chart-column-gap: var(--space-3);
+}
+
+.lifecycle-bar-chart__y-axis {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--border-color);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lifecycle-bar-chart__bars-wrap {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 160px;
+}
+
+.lifecycle-bar-chart__grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--chart-plot-inset);
+  right: var(--chart-plot-inset);
+  /* Horizontal guides only (not the y=0 line; that is .lifecycle-bar-chart__baseline). */
+  background-image: linear-gradient(
+      to bottom,
+      transparent calc(25% - 1px),
+      var(--border-light) calc(25% - 1px),
+      var(--border-light) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent calc(50% - 1px),
+      var(--border-light) calc(50% - 1px),
+      var(--border-light) 50%,
+      transparent 50%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent calc(75% - 1px),
+      var(--border-light) calc(75% - 1px),
+      var(--border-light) 75%,
+      transparent 75%
+    );
+  pointer-events: none;
+}
+
+.lifecycle-bar-chart__bars {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: var(--chart-column-gap);
+  height: 100%;
+  min-height: 140px;
+  z-index: 1;
+  padding-left: var(--chart-plot-inset);
+  padding-right: var(--chart-plot-inset);
+  box-sizing: border-box;
+}
+
+.lifecycle-bar-chart__baseline {
+  /* Full width of plot column: x-axis meets y-axis at origin (0). Bar inset is padding on .bars only. */
+  grid-column: 2;
+  grid-row: 2;
+  height: 0;
+  border-top: 1px solid var(--border-color);
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lifecycle-bar-chart__x-labels {
+  grid-column: 2;
+  grid-row: 3;
+  display: flex;
+  justify-content: stretch;
+  align-items: flex-start;
+  gap: var(--chart-column-gap);
+  padding-top: var(--space-2);
+  padding-left: var(--chart-plot-inset);
+  padding-right: var(--chart-plot-inset);
+  box-sizing: border-box;
+}
+
+.lifecycle-bar-chart__label-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  text-align: center;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.lifecycle-bar-chart__label-cell-inner {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: center;
+  width: 100%;
+}
+
+.lifecycle-bar-chart__column {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.lifecycle-bar-chart__column--interactive .lifecycle-bar-chart__column-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: var(--space-20);
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius-md);
+}
+
+.lifecycle-bar-chart__column--interactive .lifecycle-bar-chart__column-hit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--text-primary);
+}
+
+.lifecycle-bar-chart--status-filter-on .lifecycle-bar-chart__column--selected .lifecycle-bar-chart__bar {
+  filter: brightness(1.06) saturate(1.12);
+}
+
+.lifecycle-bar-chart--status-filter-on .lifecycle-bar-chart__column--selected .lifecycle-bar-chart__value {
+  opacity: 1;
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+}
+
+/* When a status filter is active, non-selected bars read as de-emphasized. */
+.lifecycle-bar-chart__column--dimmed .lifecycle-bar-chart__bar {
+  opacity: 0.32;
+  filter: saturate(0.55);
+  transition:
+    opacity 0.22s ease,
+    filter 0.22s ease,
+    height 0.2s ease;
+}
+
+.lifecycle-bar-chart__column--dimmed .lifecycle-bar-chart__value {
+  opacity: 0.42;
+  color: var(--text-secondary);
+  transition:
+    opacity 0.22s ease,
+    color 0.22s ease;
+}
+
+.lifecycle-bar-chart__column:not(.lifecycle-bar-chart__column--dimmed) .lifecycle-bar-chart__bar {
+  transition:
+    opacity 0.22s ease,
+    filter 0.22s ease,
+    height 0.2s ease;
+}
+
+.lifecycle-bar-chart__column:not(.lifecycle-bar-chart__column--dimmed) .lifecycle-bar-chart__value {
+  transition:
+    opacity 0.22s ease,
+    color 0.22s ease;
+}
+
+.lifecycle-bar-chart__label-cell--dimmed .lifecycle-bar-chart__label-cell-inner {
+  opacity: 0.42;
+  color: var(--text-secondary);
+  transition: opacity 0.22s ease, color 0.22s ease;
+}
+
+.lifecycle-bar-chart__label-cell:not(.lifecycle-bar-chart__label-cell--dimmed) .lifecycle-bar-chart__label-cell-inner {
+  transition: opacity 0.22s ease, color 0.22s ease;
+}
+
+.lifecycle-bar-chart__label-cell--interactive .lifecycle-bar-chart__label-hit {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: var(--space-1) 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+.lifecycle-bar-chart__label-cell--interactive .lifecycle-bar-chart__label-hit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--text-primary);
+}
+
+.lifecycle-bar-chart--status-filter-on .lifecycle-bar-chart__label-cell--selected .lifecycle-bar-chart__label-cell-inner {
+  opacity: 1;
+  color: var(--text-primary);
+  font-weight: var(--font-semibold);
+}
+
+.lifecycle-bar-chart__track {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: var(--space-20);
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 140px;
+}
+
+/* Value sits on the bar top (reference: number printed directly above each bar). */
+.lifecycle-bar-chart__value {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  line-height: 1.1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.lifecycle-bar-chart__bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  min-height: 4px;
+  transition: height 0.2s ease;
+}
+
+/* Active filter row: label + outline Button tags (selected lifecycle bars). */
+.lifecycle-bar-chart__active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  max-width: 100%;
+}
+
+.lifecycle-bar-chart__active-filters-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  line-height: var(--leading-snug);
+}
+
+.lifecycle-bar-chart__selection-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.lifecycle-bar-chart__selection-tags li {
+  margin: 0;
+}
+
+/* Filter tags: outline Button, 4px radius; brand fill + white label/icon + full interaction states. */
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button.btn {
+  --filter-tag-bg: #4c92d9;
+  --filter-tag-bg-hover: #3d7ebf;
+  --filter-tag-bg-active: #3270b0;
+  border-radius: var(--radius-04);
+  justify-content: center;
+  font-weight: var(--font-normal);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  max-width: min(100%, 280px);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button.btn--outline {
+  background-color: var(--filter-tag-bg);
+  border: 1px solid var(--filter-tag-bg);
+  color: #fff;
+}
+
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button.btn--outline:hover:not(:disabled):not(.btn--disabled) {
+  background-color: var(--filter-tag-bg-hover);
+  border-color: var(--filter-tag-bg-hover);
+  color: #fff;
+  box-shadow: none;
+}
+
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button.btn--outline:active:not(:disabled):not(.btn--disabled) {
+  background-color: var(--filter-tag-bg-active);
+  border-color: var(--filter-tag-bg-active);
+  color: #fff;
+  box-shadow: var(--shadow-inset-sm);
+}
+
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button.btn--outline:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button.btn--outline:disabled,
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button.btn--outline.btn--disabled {
+  background-color: var(--filter-tag-bg);
+  border-color: var(--filter-tag-bg);
+  color: #fff;
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.lifecycle-bar-chart .lifecycle-bar-chart__filter-button svg {
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.lifecycle-bar-chart__filter-button-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.lifecycle-bar-chart__legend {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-light);
+}
+
+.lifecycle-bar-chart__legend-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.lifecycle-bar-chart__legend-list {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.lifecycle-bar-chart__legend-list li {
+  margin-bottom: var(--space-1);
+}
