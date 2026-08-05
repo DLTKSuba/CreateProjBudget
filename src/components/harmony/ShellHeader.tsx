@@ -62,7 +62,15 @@ export function ShellHeader({
   const gradientStyle =
     effectiveColor
       ? {
-          background: `linear-gradient(to right, ${effectiveColor}05, ${effectiveColor} 50%, ${effectiveColor}05)`,
+          background: effectiveColor,
+        }
+      : undefined
+  const companyBtnStyle =
+    effectiveColor
+      ? {
+          backgroundColor: effectiveColor,
+          borderColor: effectiveColor,
+          color: '#fff',
         }
       : undefined
 
@@ -82,6 +90,7 @@ export function ShellHeader({
               type="button"
               className="company-picker__btn"
               data-company-picker-btn
+              style={companyBtnStyle}
               onClick={() => setPickerOpen((o) => !o)}
             >
               <span

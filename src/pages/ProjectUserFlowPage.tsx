@@ -6,6 +6,8 @@ import { Checkbox } from '../components/harmony/Checkbox'
 import { Icon } from '../components/harmony/Icon'
 import { Input } from '../components/harmony/Input'
 import { ShellLayout } from '../components/harmony/ShellLayout'
+import { Stepper } from '../components/harmony/Stepper'
+import { Table } from '../components/harmony/Table'
 import { Tooltip } from '../components/harmony/Tooltip'
 import type { LeftSidebarSection } from '../components/harmony/LeftSidebar'
 import type { RightSidebarSection } from '../components/harmony/RightSidebar'
@@ -927,115 +929,468 @@ function FieldsetHeader({ title }: { title: string }) {
   )
 }
 
-const VERSION_OPTIONS: { value: ProjectVersion; label: string }[] = [
-  { value: 'V4', label: 'Design Proposal' },
-  { value: 'V1', label: 'Original/Current Version' },
-  { value: 'V2', label: 'Propose -V2' },
-  { value: 'V5', label: 'Proposal Version V4 - Update' },
-  { value: 'V3', label: 'Other Design Exploration - V3' },
-]
+const BUDGET_WIZARD_STEP_LABELS = [
+  'Select Project',
+  'Select WBS',
+  'Create Project Budget/EAC',
+] as const
 
-const OTHER_IDEA_VALUES = new Set<ProjectVersion>(['V1', 'V2', 'V3', 'V5'])
-
-function VersionPicker({
-  value,
-  onChange,
-}: {
-  value: ProjectVersion
-  onChange: (version: ProjectVersion) => void
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  const selectedLabel =
-    VERSION_OPTIONS.find((option) => option.value === value)?.label ?? 'Design Proposal'
-
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsOpen(false)
-    }
-
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen])
-
-  return (
-    <div className="project-version-picker" ref={rootRef}>
-      <span className="project-version-picker__label">Application version</span>
-      <button
-        type="button"
-        className="project-version-picker__trigger"
-        aria-label="Application version"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <span>{selectedLabel}</span>
-        <Icon name="chevron-down" size="sm" />
-      </button>
-      {isOpen && (
-        <ul className="project-version-picker__menu" role="listbox" aria-label="Application version">
-          <li role="option" aria-selected={value === 'V4'}>
-            <button
-              type="button"
-              className={`project-version-picker__option project-version-picker__option--primary${
-                value === 'V4' ? ' is-selected' : ''
-              }`}
-              onClick={() => {
-                onChange('V4')
-                setIsOpen(false)
-              }}
-            >
-              Design Proposal
-            </button>
-          </li>
-          <li className="project-version-picker__divider" role="separator" aria-hidden="true" />
-          <li className="project-version-picker__group-label" role="presentation">
-            Other Ideas (Ignore)
-          </li>
-          {VERSION_OPTIONS.filter((option) => OTHER_IDEA_VALUES.has(option.value)).map((option) => (
-            <li key={option.value} role="option" aria-selected={value === option.value}>
-              <button
-                type="button"
-                className={`project-version-picker__option project-version-picker__option--ignored${
-                  value === option.value ? ' is-selected' : ''
-                }`}
-                onClick={() => {
-                  onChange(option.value)
-                  setIsOpen(false)
-                }}
-              >
-                {option.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
+function formatSelectedProjectCaption(projectId: string) {
+  const digits = projectId.replace(/^PROJ-?/i, '')
+  return `Proj ${digits}`
 }
 
+type ProjectBudgetRow = {
+  id: string
+  name: string
+  startDate: string
+  endDate: string
+  type: string
+  contractRev: string
+  fundedRev: string
+  budget: string
+  forecast: string
+}
+
+type ProjectWbsRow = {
+  id: string
+  name: string
+  type: string
+  version: string
+  versionCode: string
+  status: string
+  closedPeriod: string
+  fundedRev: string
+  budgetedRevenue: string
+  periodOfPerformance: string
+}
+
+const PROJECT_BUDGET_ROWS: ProjectBudgetRow[] = [
+  {
+    id: 'PROJ-000000000000001',
+    name: 'A-Lab-Clin1',
+    startDate: '01/01/2010',
+    endDate: '12/31/2026',
+    type: 'A-Lab',
+    contractRev: '2160000.00',
+    fundedRev: '1160000.00',
+    budget: '100,000',
+    forecast: '160,000',
+  },
+  {
+    id: 'PROJ-000000000000002',
+    name: 'A-Lab-Clin2',
+    startDate: '01/01/2012',
+    endDate: '12/31/2025',
+    type: 'A-Lab',
+    contractRev: '980000.00',
+    fundedRev: '640000.00',
+    budget: '75,000',
+    forecast: '92,000',
+  },
+  {
+    id: 'PROJ-000000000000003',
+    name: 'Defense 1-Clin1',
+    startDate: '03/15/2015',
+    endDate: '09/30/2027',
+    type: 'Defense 1',
+    contractRev: '1060000.00',
+    fundedRev: '500000.00',
+    budget: '100,000',
+    forecast: '150,000',
+  },
+  {
+    id: 'PROJ-000000000000004',
+    name: 'Defense 1-Clin2',
+    startDate: '06/01/2016',
+    endDate: '06/30/2026',
+    type: 'Defense 1',
+    contractRev: '875000.00',
+    fundedRev: '425000.00',
+    budget: '82,500',
+    forecast: '110,000',
+  },
+  {
+    id: 'PROJ-000000000000005',
+    name: 'R&D-Clin1',
+    startDate: '01/01/2018',
+    endDate: '12/31/2028',
+    type: 'R&D',
+    contractRev: '540000.00',
+    fundedRev: '320000.00',
+    budget: '48,000',
+    forecast: '61,000',
+  },
+  {
+    id: 'PROJ-000000000000006',
+    name: 'R&D-Clin2',
+    startDate: '04/01/2019',
+    endDate: '03/31/2027',
+    type: 'R&D',
+    contractRev: '410000.00',
+    fundedRev: '275000.00',
+    budget: '36,000',
+    forecast: '44,500',
+  },
+  {
+    id: 'PROJ-000000000000007',
+    name: 'Ops Support-Clin1',
+    startDate: '07/01/2014',
+    endDate: '12/31/2025',
+    type: 'Ops',
+    contractRev: '1525000.00',
+    fundedRev: '980000.00',
+    budget: '125,000',
+    forecast: '140,000',
+  },
+  {
+    id: 'PROJ-000000000000008',
+    name: 'Ops Support-Clin2',
+    startDate: '10/01/2017',
+    endDate: '09/30/2026',
+    type: 'Ops',
+    contractRev: '695000.00',
+    fundedRev: '410000.00',
+    budget: '58,000',
+    forecast: '72,000',
+  },
+  {
+    id: 'PROJ-000000000000009',
+    name: 'Training-Clin1',
+    startDate: '02/01/2020',
+    endDate: '01/31/2026',
+    type: 'Training',
+    contractRev: '225000.00',
+    fundedRev: '180000.00',
+    budget: '22,000',
+    forecast: '28,500',
+  },
+  {
+    id: 'PROJ-000000000000010',
+    name: 'Infrastructure-Clin1',
+    startDate: '05/01/2013',
+    endDate: '12/31/2030',
+    type: 'Infra',
+    contractRev: '3250000.00',
+    fundedRev: '2100000.00',
+    budget: '275,000',
+    forecast: '310,000',
+  },
+  {
+    id: 'PROJ-000000000000011',
+    name: 'Cyber-Clin1',
+    startDate: '08/15/2021',
+    endDate: '08/14/2027',
+    type: 'Cyber',
+    contractRev: '780000.00',
+    fundedRev: '560000.00',
+    budget: '64,000',
+    forecast: '81,000',
+  },
+  {
+    id: 'PROJ-000000000000012',
+    name: 'Logistics-Clin1',
+    startDate: '11/01/2011',
+    endDate: '10/31/2025',
+    type: 'Logistics',
+    contractRev: '1340000.00',
+    fundedRev: '890000.00',
+    budget: '112,000',
+    forecast: '128,000',
+  },
+]
+
+const PROJECT_WBS_ROWS: ProjectWbsRow[] = [
+  {
+    id: 'PROJ-00100.1',
+    name: 'R&D-Clin1',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 101',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.1.01',
+    name: 'R&D-Clin2',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 102',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.1.02',
+    name: 'R&D-Clin3',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 103',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '20%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.1.03',
+    name: 'R&D-Clin4',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 104',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.1.04',
+    name: 'R&D-Clin5',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 105',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.1.05',
+    name: 'R&D-Clin6',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 106',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.2',
+    name: 'R&D-Clin7',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 107',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '71%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.2.01',
+    name: 'R&D-Clin8',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 108',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.2.02',
+    name: 'R&D-Clin9',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 109',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.2.03',
+    name: 'R&D-Clin10',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 110',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.2.04',
+    name: 'R&D-Clin11',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 111',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+  {
+    id: 'PROJ-00100.2.05',
+    name: 'R&D-Clin12',
+    type: '',
+    version: 'V1',
+    versionCode: 'CON 112',
+    status: '',
+    closedPeriod: '06/30/2025',
+    fundedRev: '500000.00',
+    budgetedRevenue: '0%',
+    periodOfPerformance: '01/01/2015 - 12/31/2026',
+  },
+]
+
+type BudgetTableColumn = string
+
+const BUDGET_RESOURCE_PERIODS = [
+  { id: 'p0', date: '01/31/2024', sublabel: '176/180' },
+  { id: 'p1', date: '02/29/2024', sublabel: '176/180' },
+  { id: 'p2', date: '03/31/2024', sublabel: '176/180' },
+  { id: 'p3', date: '04/30/2024', sublabel: '176/180' },
+  { id: 'p4', date: '05/31/2024', sublabel: '176/180' },
+  { id: 'p5', date: '06/30/2024', sublabel: '176/180' },
+  { id: 'p6', date: '07/31/2024', sublabel: '176/180' },
+  { id: 'p7', date: '08/31/2024', sublabel: '176/180' },
+  { id: 'p8', date: '09/30/2024', sublabel: '176/180' },
+  { id: 'p9', date: '10/31/2024', sublabel: '176/180' },
+  { id: 'p10', date: '11/30/2024', sublabel: '176/180' },
+  { id: 'p11', date: '12/31/2024', sublabel: '176/180' },
+] as const
+
+type BudgetResourceRow = {
+  id: string
+  type: string
+  idType: string
+  name: string
+  total: string
+  periods: string[]
+}
+
+const BUDGET_RESOURCE_ROWS: BudgetResourceRow[] = [
+  {
+    id: 'res-carpenter',
+    type: 'Employee Plc',
+    idType: 'Employee Plc',
+    name: 'Carpenter',
+    total: '0.00',
+    periods: ['0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '132.00', '0.00', '0.00', '0.00', '0.00'],
+  },
+  {
+    id: 'res-tiya',
+    type: 'Staff Hours',
+    idType: 'Employee',
+    name: 'Tiya',
+    total: '100.00',
+    periods: Array.from({ length: 12 }, () => '132.00'),
+  },
+  {
+    id: 'res-sara',
+    type: 'Staff Hours',
+    idType: 'Employee',
+    name: 'Sara',
+    total: '100.00',
+    periods: Array.from({ length: 12 }, () => '132.00'),
+  },
+  {
+    id: 'res-amy',
+    type: 'Staff Hours',
+    idType: 'Employee',
+    name: 'Amy',
+    total: '120.00',
+    periods: Array.from({ length: 12 }, () => '132.00'),
+  },
+  {
+    id: 'res-jason',
+    type: 'Staff Hours',
+    idType: 'Employee',
+    name: 'Jason',
+    total: '120.00',
+    periods: Array.from({ length: 12 }, () => '132.00'),
+  },
+  {
+    id: 'res-carlo',
+    type: 'Staff Hours',
+    idType: 'Employee',
+    name: 'Carlo',
+    total: '120.00',
+    periods: Array.from({ length: 12 }, () => '132.00'),
+  },
+  {
+    id: 'res-bushra',
+    type: 'Staff Hours',
+    idType: 'Employee',
+    name: 'Bushra',
+    total: '120.00',
+    periods: Array.from({ length: 12 }, () => '132.00'),
+  },
+  {
+    id: 'res-penelope',
+    type: 'Staff Hours',
+    idType: 'Employee',
+    name: 'Penelope',
+    total: '120.00',
+    periods: Array.from({ length: 12 }, () => '132.00'),
+  },
+]
+
 export function ProjectUserFlowPage() {
-  const [activeDefinitionTab, setActiveDefinitionTab] = useState<'basic' | 'details'>('basic')
-  const [activeProjectTab, setActiveProjectTab] = useState<string | null>(null)
-  const [version, setVersion] = useState<ProjectVersion>('V4')
+  const [wizardStep, setWizardStep] = useState(0)
+  const [includeInactive, setIncludeInactive] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState(PROJECT_BUDGET_ROWS[0]?.id ?? '')
+  const [selectedWbsId, setSelectedWbsId] = useState(PROJECT_WBS_ROWS[1]?.id ?? PROJECT_WBS_ROWS[0]?.id ?? '')
+  const [selectedResourceId, setSelectedResourceId] = useState(BUDGET_RESOURCE_ROWS[0]?.id ?? '')
+  const [activeCellColumn, setActiveCellColumn] = useState<BudgetTableColumn>('id')
+  const isWbsStep = wizardStep === 1
+  const isCreateStep = wizardStep === 2
+
+  const wizardSteps = BUDGET_WIZARD_STEP_LABELS.map((label, index) => {
+    if (index === 0 && wizardStep > 0) {
+      return {
+        label: 'Selected Project',
+        description: formatSelectedProjectCaption(selectedProjectId),
+        completed: true,
+      }
+    }
+    if (index === 1 && wizardStep > 1) {
+      return {
+        label: 'Selected WBS',
+        description: selectedWbsId,
+        completed: true,
+      }
+    }
+    return { label }
+  })
+
+  const selectProjectCell = (projectId: string, column: BudgetTableColumn) => {
+    setSelectedProjectId(projectId)
+    setActiveCellColumn(column)
+  }
+
+  const selectWbsCell = (wbsId: string, column: BudgetTableColumn) => {
+    setSelectedWbsId(wbsId)
+    setActiveCellColumn(column)
+  }
+
+  const selectResourceCell = (resourceId: string, column: BudgetTableColumn) => {
+    setSelectedResourceId(resourceId)
+    setActiveCellColumn(column)
+  }
+
+  const goToStep = (step: number) => {
+    setWizardStep(step)
+    setActiveCellColumn(step === 2 ? 'type' : 'id')
+  }
 
   const floatingNavActions = (
     <>
       <div className="floating-nav__buttons">
-        <button type="button" className="floating-nav__btn floating-nav__btn--secondary">
-          Clone
-        </button>
         <ActionMenuButton>Actions</ActionMenuButton>
         <button
           type="button"
@@ -1045,19 +1400,449 @@ export function ProjectUserFlowPage() {
           <Icon name="arrow-path" size="md" className="floating-nav__btn-icon" />
           <Icon name="chevron-down" size="sm" className="floating-nav__btn-chevron" />
         </button>
-        <button type="button" className="floating-nav__btn floating-nav__btn--primary floating-nav__btn--dropdown">
-          <span className="floating-nav__btn-text">Save</span>
-          <Icon name="chevron-down" size="sm" className="floating-nav__btn-chevron" />
-        </button>
       </div>
       <div className="floating-nav__divider" />
-      <button type="button" className="floating-nav__pin" aria-label="Enter full screen">
-        <Icon name="arrows-pointing-out" size="md" className="floating-nav__pin-icon" />
-      </button>
       <button type="button" className="floating-nav__pin" aria-label="Pin navigation">
         <Icon name="pin" size="md" className="floating-nav__pin-icon" />
       </button>
     </>
+  )
+
+  const tableHeader = (
+    <thead>
+      <tr>
+        <th className="budget-table__lead-col" scope="col">
+          <input
+            type="checkbox"
+            aria-label={
+              isCreateStep ? 'Select all resources' : isWbsStep ? 'Select all WBS' : 'Select all projects'
+            }
+          />
+        </th>
+        {isCreateStep ? (
+          <>
+            <th scope="col">Type</th>
+            <th scope="col">ID Type</th>
+            <th scope="col">Name</th>
+          </>
+        ) : isWbsStep ? (
+          <>
+            <th scope="col">Project ID</th>
+            <th scope="col">Project Name</th>
+            <th scope="col">Type</th>
+            <th scope="col">Version</th>
+            <th scope="col">Version Code</th>
+            <th scope="col">Status</th>
+            <th scope="col">Closed Period</th>
+            <th className="budget-table__num" scope="col">
+              Funded Rev
+            </th>
+            <th className="budget-table__num" scope="col">
+              Budgeted Revenue
+            </th>
+            <th scope="col">Period Of Performance</th>
+          </>
+        ) : (
+          <>
+            <th scope="col">Project ID</th>
+            <th scope="col">Project Name</th>
+            <th scope="col">Start Date</th>
+            <th scope="col">End Date</th>
+            <th scope="col">Project Type</th>
+            <th className="budget-table__num" scope="col">
+              Contract Rev
+            </th>
+            <th className="budget-table__num" scope="col">
+              Funded Rev
+            </th>
+            <th className="budget-table__num" scope="col">
+              Budget
+            </th>
+            <th className="budget-table__num" scope="col">
+              Forecast
+            </th>
+          </>
+        )}
+      </tr>
+    </thead>
+  )
+
+  const tableBody = (
+    <tbody>
+      {isCreateStep
+        ? BUDGET_RESOURCE_ROWS.map((row) => {
+            const isSelected = row.id === selectedResourceId
+            const cellClass = (column: BudgetTableColumn, extra?: string) =>
+              [extra, isSelected && activeCellColumn === column ? 'is-active-cell' : undefined]
+                .filter(Boolean)
+                .join(' ') || undefined
+
+            return (
+              <tr
+                key={row.id}
+                data-row-id={row.id}
+                className={isSelected ? 'is-selected table-row--selected' : undefined}
+                aria-selected={isSelected}
+                tabIndex={0}
+                onClick={() => selectResourceCell(row.id, 'type')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    selectResourceCell(row.id, activeCellColumn)
+                  }
+                }}
+              >
+                <td
+                  className={cellClass('lead', 'budget-table__lead-col')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectResourceCell(row.id, 'lead')
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    readOnly
+                    aria-label={`Select ${row.name}`}
+                  />
+                </td>
+                <td
+                  className={cellClass('type')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectResourceCell(row.id, 'type')
+                  }}
+                >
+                  {row.type}
+                </td>
+                <td
+                  className={cellClass('idType')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectResourceCell(row.id, 'idType')
+                  }}
+                >
+                  {row.idType}
+                </td>
+                <td
+                  className={cellClass('name')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectResourceCell(row.id, 'name')
+                  }}
+                >
+                  {row.name}
+                </td>
+              </tr>
+            )
+          })
+        : isWbsStep
+        ? PROJECT_WBS_ROWS.map((row) => {
+            const isSelected = row.id === selectedWbsId
+            const cellClass = (column: BudgetTableColumn, extra?: string) =>
+              [extra, isSelected && activeCellColumn === column ? 'is-active-cell' : undefined]
+                .filter(Boolean)
+                .join(' ') || undefined
+
+            return (
+              <tr
+                key={row.id}
+                data-row-id={row.id}
+                className={isSelected ? 'is-selected table-row--selected' : undefined}
+                aria-selected={isSelected}
+                tabIndex={0}
+                onClick={() => selectWbsCell(row.id, 'id')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    selectWbsCell(row.id, activeCellColumn)
+                  }
+                }}
+              >
+                <td
+                  className={cellClass('lead', 'budget-table__lead-col')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'lead')
+                  }}
+                />
+                <td
+                  className={cellClass('id')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'id')
+                  }}
+                >
+                  {row.id}
+                </td>
+                <td
+                  className={cellClass('name')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'name')
+                  }}
+                >
+                  {row.name}
+                </td>
+                <td
+                  className={cellClass('type')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'type')
+                  }}
+                >
+                  {row.type}
+                </td>
+                <td
+                  className={cellClass('version')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'version')
+                  }}
+                >
+                  {row.version}
+                </td>
+                <td
+                  className={cellClass('versionCode')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'versionCode')
+                  }}
+                >
+                  {row.versionCode}
+                </td>
+                <td
+                  className={cellClass('status')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'status')
+                  }}
+                >
+                  {row.status}
+                </td>
+                <td
+                  className={cellClass('closedPeriod')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'closedPeriod')
+                  }}
+                >
+                  {row.closedPeriod}
+                </td>
+                <td
+                  className={cellClass('fundedRev', 'budget-table__num')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'fundedRev')
+                  }}
+                >
+                  {row.fundedRev}
+                </td>
+                <td
+                  className={cellClass('budgetedRevenue', 'budget-table__num')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'budgetedRevenue')
+                  }}
+                >
+                  {row.budgetedRevenue}
+                </td>
+                <td
+                  className={cellClass('periodOfPerformance')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectWbsCell(row.id, 'periodOfPerformance')
+                  }}
+                >
+                  {row.periodOfPerformance}
+                </td>
+              </tr>
+            )
+          })
+        : PROJECT_BUDGET_ROWS.map((row) => {
+            const isSelected = row.id === selectedProjectId
+            const cellClass = (column: BudgetTableColumn, extra?: string) =>
+              [extra, isSelected && activeCellColumn === column ? 'is-active-cell' : undefined]
+                .filter(Boolean)
+                .join(' ') || undefined
+
+            return (
+              <tr
+                key={row.id}
+                data-row-id={row.id}
+                className={isSelected ? 'is-selected table-row--selected' : undefined}
+                aria-selected={isSelected}
+                tabIndex={0}
+                onClick={() => selectProjectCell(row.id, 'id')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    selectProjectCell(row.id, activeCellColumn)
+                  }
+                }}
+              >
+                <td
+                  className={cellClass('lead', 'budget-table__lead-col')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'lead')
+                  }}
+                />
+                <td
+                  className={cellClass('id')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'id')
+                  }}
+                >
+                  {row.id}
+                </td>
+                <td
+                  className={cellClass('name')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'name')
+                  }}
+                >
+                  {row.name}
+                </td>
+                <td
+                  className={cellClass('startDate')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'startDate')
+                  }}
+                >
+                  {row.startDate}
+                </td>
+                <td
+                  className={cellClass('endDate')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'endDate')
+                  }}
+                >
+                  {row.endDate}
+                </td>
+                <td
+                  className={cellClass('type')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'type')
+                  }}
+                >
+                  {row.type}
+                </td>
+                <td
+                  className={cellClass('contractRev', 'budget-table__num')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'contractRev')
+                  }}
+                >
+                  {row.contractRev}
+                </td>
+                <td
+                  className={cellClass('fundedRev', 'budget-table__num')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'fundedRev')
+                  }}
+                >
+                  {row.fundedRev}
+                </td>
+                <td
+                  className={cellClass('budget', 'budget-table__num')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'budget')
+                  }}
+                >
+                  {row.budget}
+                </td>
+                <td
+                  className={cellClass('forecast', 'budget-table__num')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectProjectCell(row.id, 'forecast')
+                  }}
+                >
+                  {row.forecast}
+                </td>
+              </tr>
+            )
+          })}
+    </tbody>
+  )
+
+  const resourceScrollHeader = (
+    <thead>
+      <tr>
+        <th className="budget-table__num" scope="col">
+          Total
+        </th>
+        {BUDGET_RESOURCE_PERIODS.map((period) => (
+          <th key={period.id} className="budget-table__num budget-table__period" scope="col">
+            <span className="budget-table__period-date">{period.date}</span>
+            <span className="budget-table__period-sub">{period.sublabel}</span>
+          </th>
+        ))}
+      </tr>
+    </thead>
+  )
+
+  const resourceScrollBody = (
+    <tbody>
+      {BUDGET_RESOURCE_ROWS.map((row) => {
+        const isSelected = row.id === selectedResourceId
+        const cellClass = (column: BudgetTableColumn, extra?: string) =>
+          [extra, isSelected && activeCellColumn === column ? 'is-active-cell' : undefined]
+            .filter(Boolean)
+            .join(' ') || undefined
+
+        return (
+          <tr
+            key={row.id}
+            data-row-id={row.id}
+            className={isSelected ? 'is-selected table-row--selected' : undefined}
+            aria-selected={isSelected}
+            tabIndex={0}
+            onClick={() => selectResourceCell(row.id, 'total')}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                selectResourceCell(row.id, activeCellColumn)
+              }
+            }}
+          >
+            <td
+              className={cellClass('total', 'budget-table__num')}
+              onClick={(event) => {
+                event.stopPropagation()
+                selectResourceCell(row.id, 'total')
+              }}
+            >
+              {row.total}
+            </td>
+            {row.periods.map((value, periodIndex) => {
+              const column = `period-${periodIndex}`
+              return (
+                <td
+                  key={`${row.id}-${column}`}
+                  className={cellClass(column, 'budget-table__num')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    selectResourceCell(row.id, column)
+                  }}
+                >
+                  {value}
+                </td>
+              )
+            })}
+          </tr>
+        )
+      })}
+    </tbody>
   )
 
   return (
@@ -1065,11 +1850,11 @@ export function ProjectUserFlowPage() {
       productName="Costpoint"
       logoSrc="/logos/CPVPLogo.svg"
       companyName="Applied Technologies Inc"
+      companyColor="#f66e57"
       companies={[
-        { id: 'ati', name: 'Applied Technologies Inc', color: '#4c92d9' },
-        { id: 'deltek', name: 'Deltek Demo Company', color: '#7367f0' },
+        { id: 'ati', name: 'Applied Technologies Inc', color: '#f66e57' },
+        { id: 'deltek', name: 'Deltek Demo Company', color: '#4c92d9' },
       ]}
-      beforeCompanyPicker={<VersionPicker value={version} onChange={setVersion} />}
       showFooter={false}
       showFloatingNav
       floatingNavActions={floatingNavActions}
@@ -1077,147 +1862,163 @@ export function ProjectUserFlowPage() {
       rightSidebarVariant="cp"
       leftSidebarSections={LEFT_SECTIONS}
       rightSidebarSections={RIGHT_SECTIONS}
-      showRightShellPanel
-      rightShellPanelInitialTitle="Change History"
-      rightShellPanelInitialTitleIcon="history"
-      rightShellPanelSlot={<ChangeHistoryPanel key={version} version={version} />}
+      showRightShellPanel={false}
       pageHeaderTitle=""
       className="project-user-flow-shell"
     >
-      <div className="project-user-flow-bg" aria-hidden="true">
-        <span className="project-user-flow-bg__grid" />
-        <span className="project-user-flow-bg__dial project-user-flow-bg__dial--large" />
-        <span className="project-user-flow-bg__dial project-user-flow-bg__dial--small" />
-      </div>
+      <div className="project-user-flow-bg" aria-hidden="true" />
 
-      <section className="project-window" aria-labelledby="project-window-title">
-        <header className="project-window__titlebar">
-          <h1 id="project-window-title">Manage Project User Flow</h1>
-          <div className="project-window__record-actions">
-            <Button size="xs">New</Button>
-            <Button size="xs" variant="outline" icon="document" iconPosition="right">
-              Copy
-            </Button>
-            <Button size="xs" variant="outline">Delete</Button>
-            <Button size="xs" variant="outline" icon="chevron-down" iconPosition="right">
-              Attach
-            </Button>
-            <Button size="xs" variant="outline">Approval</Button>
-            <span className="project-window__record-count" aria-label="Record navigation">
-              <input type="checkbox" aria-label="Select record" />
-              <Icon name="chevron-left" size="xs" />
-              <strong>1 of 1 Existing</strong>
-              <Icon name="chevron-right" size="xs" />
-            </span>
-            <Input className="project-window__find" placeholder="Find" aria-label="Find project" />
-            <Button size="xs" className="project-window__query">Query</Button>
-            <Button size="xs" icon="squares-2x2" ariaLabel="Card view" />
-            <Button size="xs" variant="outline" icon="view-columns" ariaLabel="Grid view" />
-            <button className="project-window__icon-btn" type="button" aria-label="More actions">
-              <Icon name="ellipsis-horizontal" size="sm" />
+      <section className="project-window budget-window" aria-labelledby="project-window-title">
+        <header className="project-window__titlebar budget-window__titlebar">
+          <h1 id="project-window-title">Projects Budget /EAC</h1>
+          <div className="budget-window__title-actions">
+            <button type="button" className="project-window__icon-btn" aria-label="Card view">
+              <Icon name="squares-2x2" size="sm" />
             </button>
-            <button className="project-window__icon-btn" type="button" aria-label="Minimize">
+            <button type="button" className="project-window__icon-btn is-active" aria-label="Grid view">
+              <Icon name="view-columns" size="sm" />
+            </button>
+            <button type="button" className="project-window__icon-btn" aria-label="Minimize">
               <Icon name="minus" size="sm" />
             </button>
-            <button className="project-window__icon-btn" type="button" aria-label="Close">
+            <button type="button" className="project-window__icon-btn" aria-label="Close">
               <Icon name="x-mark" size="sm" />
             </button>
           </div>
         </header>
 
-        <div className="project-window__identity">
-          <ProjectField label="Project*" value="9000.004.10" compact />
-          <ProjectField label="Name*" value="V3 PRODUCTION REFLECTORS..." className="project-field--grow" />
-          <ProjectField label="Abbreviation" value="980AMA" compact />
-          <ProjectField label="Level" value="3" compact />
-          <Button size="xs">Load Defaults</Button>
-        </div>
+        <div className="budget-window__body">
+          <div className="budget-wizard">
+            <Stepper
+              className="budget-wizard__stepper"
+              activeStep={wizardStep}
+              steps={wizardSteps}
+              onStepClick={goToStep}
+              nonLinear
+            />
+          </div>
 
-        <nav className="project-window__definition-tabs" aria-label="Project definition sections">
-          <button type="button" className="project-window__definition-label">
-            Primary Definitions
-          </button>
-          <button
-            type="button"
-            className={activeDefinitionTab === 'basic' ? 'is-active' : ''}
-            onClick={() => setActiveDefinitionTab('basic')}
-          >
-            Basic Info
-          </button>
-          <button
-            type="button"
-            className={activeDefinitionTab === 'details' ? 'is-active' : ''}
-            onClick={() => setActiveDefinitionTab('details')}
-          >
-            Details
-          </button>
-        </nav>
+          <div className="budget-toolbar">
+            {isCreateStep ? (
+              <div className="budget-toolbar__group">
+                <Button size="sm" variant="secondary" className="budget-toolbar__secondary">
+                  Fill
+                </Button>
+                <Button size="sm" variant="secondary" className="budget-toolbar__secondary">
+                  Distribute
+                </Button>
+                <Button size="sm" variant="secondary" className="budget-toolbar__secondary">
+                  Delete
+                </Button>
+              </div>
+            ) : isWbsStep ? (
+              <Button size="sm" variant="secondary" className="budget-toolbar__secondary">
+                Delete
+              </Button>
+            ) : (
+              <Checkbox
+                label="Include Inactive Projects"
+                checked={includeInactive}
+                onChange={(event) => setIncludeInactive(event.target.checked)}
+              />
+            )}
+            <div className="budget-toolbar__actions">
+              {isCreateStep ? (
+                <>
+                  <Button size="sm" variant="secondary" className="budget-toolbar__secondary">
+                    New
+                  </Button>
+                  <Button size="sm" variant="secondary" className="budget-toolbar__secondary">
+                    Add Resources in bulk
+                  </Button>
+                </>
+              ) : null}
+              {isWbsStep ? (
+                <>
+                  <Button size="sm" variant="outline" disabled className="budget-toolbar__action">
+                    Modify
+                  </Button>
+                  <Button size="sm" variant="outline" disabled className="budget-toolbar__action">
+                    Compare Versions
+                  </Button>
+                </>
+              ) : null}
+              <Button
+                size="sm"
+                variant="outline"
+                icon="chevron-down"
+                iconPosition="right"
+                className="budget-toolbar__query"
+              >
+                Query
+              </Button>
+            </div>
+          </div>
 
-        <div className="project-window__form">
-          <fieldset className="project-fieldset">
-            <FieldsetHeader title="Classification" />
-            <ProjectField label="Project Classification" value="DIRECT PROJECT" />
-            <ProjectSelect label="Project Type" value="FIXED PRICE" options={['FIXED PRICE', 'COST PLUS', 'TIME & MATERIALS']} />
-            <ProjectSelect label="Export Project" value="Time & Expense Project" options={['Time & Expense Project', 'Billing Project', 'No Export']} />
-            <div className="project-fieldset__checks">
-              <Checkbox label="Billable Project" defaultChecked />
-              <Checkbox label="Apply Cost of Money Rates" />
-              <Checkbox label="Cobra Project" />
+          {isCreateStep ? (
+            <div className="budget-split-table" role="group" aria-label="Resource budget table">
+              <div className="budget-split-table__pane budget-split-table__pane--fixed budget-table-shell">
+                <Table
+                  className="budget-table budget-table--resources budget-table--resources-fixed"
+                  headerVariant="gray"
+                  header={tableHeader}
+                  body={tableBody}
+                />
+              </div>
+              <div className="budget-split-table__gutter" aria-hidden="true" />
+              <div className="budget-split-table__pane budget-split-table__pane--scroll budget-table-shell budget-table-shell--scroll">
+                <Table
+                  className="budget-table budget-table--resources budget-table--resources-scroll"
+                  headerVariant="gray"
+                  header={resourceScrollHeader}
+                  body={resourceScrollBody}
+                />
+              </div>
             </div>
-            <ProjectField label="Cobra Mapping V..." value="" />
-            <a className="project-fieldset__link" href="#project-roles">Project Roles</a>
-          </fieldset>
-
-          <fieldset className="project-fieldset">
-            <FieldsetHeader title="Charging" />
-            <div className="project-fieldset__checks project-fieldset__checks--two-column">
-              <Checkbox label="Active" defaultChecked />
-              <Checkbox label="Allow Charging" defaultChecked />
-            </div>
-            <ProjectSelect label="Account Group" value="GOV" options={['GOV', 'COMMERCIAL', 'INTERNAL']} />
-            <div className="project-fieldset__checks">
-              <Checkbox label="Organizations" defaultChecked />
-              <Checkbox label="Which Orgs Can Charge Specific Accts" />
-              <Checkbox label="Allow Edit" />
-              <Checkbox label="Export to Shop Floor Time" />
-              <Checkbox label="Export to Manufacturing Execution" />
-              <Checkbox label="Export Project Workforce to Talent" />
-            </div>
-          </fieldset>
-
-          <fieldset className="project-fieldset">
-            <FieldsetHeader title="Controls" />
-            <ProjectField label="Owning Org" value="" />
-            <div className="project-fieldset__checks">
-              <Checkbox label="Default to Owning Organization" defaultChecked />
-              <Checkbox label="Project Workforce Required" defaultChecked />
-              <Checkbox label="Use Top Level Workforce" />
-              <Checkbox label="Apply Salary Cap" />
-            </div>
-            <ProjectField label="Salary Cap Code" value="" />
-            <a className="project-fieldset__link project-fieldset__link--inline" href="#acrn-options">
-              ACRN Options
-            </a>
-            <div className="project-fieldset__checks project-fieldset__checks--bottom">
-              <Checkbox label="Allow Edit" />
-              <Checkbox label="ACRN Warnings With Modifications Changes" />
-            </div>
-          </fieldset>
-        </div>
-
-        <nav className="project-window__bottom-tabs" aria-label="Project detail tabs">
-          {PROJECT_TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              className={activeProjectTab === tab ? 'is-active' : ''}
-              onClick={() => setActiveProjectTab(tab)}
+          ) : (
+            <div
+              className={`budget-table-shell${isWbsStep ? ' budget-table-shell--scroll' : ''}`}
+              style={
+                isWbsStep
+                  ? {
+                      overflowX: 'scroll',
+                      overflowY: 'hidden',
+                      maxWidth: '100%',
+                      width: '100%',
+                    }
+                  : undefined
+              }
             >
-              {tab}
-              {tab === 'ACRN' && <span className="project-window__tab-count">1</span>}
-            </button>
-          ))}
-        </nav>
+              <Table
+                className={`budget-table${isWbsStep ? ' budget-table--wbs' : ''}`}
+                headerVariant="gray"
+                header={tableHeader}
+                body={tableBody}
+              />
+            </div>
+          )}
+
+          <footer className="budget-window__footer">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={wizardStep === 0}
+              className="budget-window__back"
+              onClick={() => goToStep(Math.max(wizardStep - 1, 0))}
+            >
+              Back
+            </Button>
+            <Button
+              size="sm"
+              className="budget-window__next"
+              onClick={() =>
+                goToStep(Math.min(wizardStep + 1, BUDGET_WIZARD_STEP_LABELS.length - 1))
+              }
+            >
+              Next
+            </Button>
+          </footer>
+        </div>
       </section>
     </ShellLayout>
   )
