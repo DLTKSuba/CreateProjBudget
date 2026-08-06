@@ -1633,6 +1633,41 @@
   padding: 8px 16px 18px;
   background: #fff;
   overflow: hidden;
+  position: relative;
+}
+
+.budget-window__toast {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 20;
+  width: min(420px, calc(100% - 32px));
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.budget-window__toast-alert.alert {
+  box-shadow: 0 4px 16px rgba(55, 63, 78, 0.18);
+}
+
+.budget-window__toast-alert.alert--enhanced .alert__border {
+  width: 6px;
+  background-color: #2e7d32;
+}
+
+.budget-window__toast-alert.alert--success .alert__icon {
+  color: #2e7d32;
+}
+
+.budget-window__toast-alert .alert__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #373f4e;
+}
+
+.budget-window__toast-alert .alert__message {
+  font-size: 12px;
+  color: #525969;
 }
 
 .budget-table-shell.budget-table-shell--scroll {
@@ -1711,7 +1746,9 @@
 }
 
 .budget-table-shell .table.budget-table--wbs,
-.budget-table-shell .table.budget-table--wbs.budget-table {
+.budget-table-shell .table.budget-table--wbs.budget-table,
+.budget-table-shell .table.budget-table--projects,
+.budget-table-shell .table.budget-table--projects.budget-table {
   min-width: 1560px !important;
   width: max-content !important;
   max-width: none !important;
@@ -1719,7 +1756,9 @@
 }
 
 .budget-table-shell .table.budget-table--wbs th,
-.budget-table-shell .table.budget-table--wbs td {
+.budget-table-shell .table.budget-table--wbs td,
+.budget-table-shell .table.budget-table--projects th,
+.budget-table-shell .table.budget-table--projects td {
   white-space: nowrap;
 }
 
@@ -1821,6 +1860,224 @@
   justify-content: space-between;
   gap: 12px;
   padding: 4px 0 10px;
+}
+
+.budget-create-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.budget-create-chrome__tabs-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #dce3ec;
+}
+
+.budget-create-chrome__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+
+.budget-create-chrome__muted.btn {
+  min-height: 28px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #9aa3af !important;
+  background: #fff !important;
+  border-color: #c9c9c9 !important;
+}
+
+.budget-create-chrome__secondary.btn {
+  min-height: 28px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.budget-create-chrome__commit.btn {
+  min-height: 28px;
+  padding: 4px 14px;
+  font-size: 12px;
+  background: #4c92d9;
+  border-color: #4c92d9;
+}
+
+.budget-create-chrome__segments {
+  display: flex;
+  align-items: center;
+}
+
+.budget-create-tabs.tabstrip {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.budget-create-tabs .tabstrip__nav,
+.budget-create-tabs .tabstrip__container {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.budget-create-tabs .tabstrip__tabs {
+  gap: 20px;
+}
+
+.budget-create-tabs .tab {
+  min-height: 28px;
+  padding: 4px 2px 10px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #9aa3af;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.budget-create-tabs .tab.is-active {
+  color: #373f4e;
+  font-weight: 600;
+  border-bottom: 3px solid #4c92d9;
+}
+
+.budget-create-tabs .tab:hover:not(.is-active):not(.tab--disabled) {
+  color: #525969;
+  background: transparent;
+}
+
+.budget-create-tabs .tab.tab--disabled,
+.budget-create-tabs .tab:disabled {
+  color: #c5cad3;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.budget-create-tabs--eac-enabled .tab[data-tab-id='create-eac']:not(.is-active):not(.tab--disabled) {
+  color: #525969;
+}
+
+.budget-create-segments.btn-group {
+  border-color: #4c92d9;
+  background: #fff;
+  padding: 2px;
+  gap: 0;
+}
+
+.budget-create-segments .btn {
+  min-height: 28px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none !important;
+  box-shadow: none;
+}
+
+.budget-create-segments .btn--outline {
+  color: #2f6fad;
+  background: transparent;
+}
+
+.budget-create-segments .btn--primary {
+  background: #4c92d9;
+  color: #fff;
+}
+
+.commit-budget-dialog.dialog {
+  width: 520px;
+  min-width: 0;
+  max-width: calc(100vw - 48px);
+  border-radius: 10px;
+}
+
+.dialog-overlay:has(.commit-budget-dialog) {
+  align-items: flex-start;
+  padding-top: 62px;
+}
+
+.commit-budget-dialog .dialog__header {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-bottom: 0;
+}
+
+.commit-budget-dialog .dialog__title {
+  color: #373f4e;
+  font-family: 'Lexend', var(--font-sans), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.commit-budget-dialog .dialog__close {
+  width: 24px;
+  height: 24px;
+}
+
+.commit-budget-dialog .dialog__body {
+  padding: 0 14px 10px;
+  overflow: visible;
+}
+
+.commit-budget-dialog .dialog__footer {
+  padding: 10px 14px 12px;
+  border-top: 0;
+  background: #fff;
+}
+
+.commit-budget-dialog__workflow {
+  min-width: 0;
+  margin: 0;
+  padding: 6px 10px 8px;
+  border: 1px solid #c9c9c9;
+  border-radius: 8px;
+}
+
+.commit-budget-dialog__workflow legend {
+  padding: 0 5px;
+  color: #2f6fad;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.commit-budget-dialog__workflow p {
+  margin: 0 0 6px;
+  color: #373f4e;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.commit-budget-dialog__options {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.commit-budget-dialog__options .radio__label,
+.commit-budget-dialog__options .checkbox__label {
+  color: #525969;
+  font-size: 10px;
+}
+
+.commit-budget-dialog__mark-final {
+  margin: 4px 0 0 24px;
+}
+
+.commit-budget-dialog__footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.commit-budget-dialog__footer-actions .btn {
+  min-height: 28px;
+  padding: 4px 11px;
+  font-size: 10px;
 }
 
 .budget-toolbar .checkbox__label {
@@ -2071,9 +2328,17 @@
   border-color: #4c92d9;
 }
 
-.budget-window__next.btn:hover {
+.budget-window__next.btn:hover:not(:disabled):not(.btn--disabled) {
   background: #3d7bc4;
   border-color: #3d7bc4;
+}
+
+.budget-window__next.btn:disabled,
+.budget-window__next.btn.btn--disabled {
+  color: #9aa3af;
+  background: #f3f5f8;
+  border-color: #d5dbe3;
+  cursor: not-allowed;
 }
 
 /* Step 2 WBS table: force full column width + horizontal scrollbar */
@@ -2112,7 +2377,8 @@
   overflow: visible !important;
 }
 
-.budget-table-shell .table.budget-table.budget-table--wbs {
+.budget-table-shell .table.budget-table.budget-table--wbs,
+.budget-table-shell .table.budget-table.budget-table--projects {
   width: max-content !important;
   min-width: 1680px !important;
   max-width: none !important;

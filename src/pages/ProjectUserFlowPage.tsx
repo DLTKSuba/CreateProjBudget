@@ -1,13 +1,32 @@
 import { useState } from 'react'
+import { Alert } from '../components/harmony/Alert'
 import { Button } from '../components/harmony/Button'
+import { ButtonGroup } from '../components/harmony/ButtonGroup'
 import { Checkbox } from '../components/harmony/Checkbox'
+import { Dialog } from '../components/harmony/Dialog'
 import { Icon } from '../components/harmony/Icon'
+import { RadioButton } from '../components/harmony/RadioButton'
 import { ShellLayout } from '../components/harmony/ShellLayout'
 import { Stepper } from '../components/harmony/Stepper'
 import { Table } from '../components/harmony/Table'
+import { TabStrip } from '../components/harmony/TabStrip'
 import type { LeftSidebarSection } from '../components/harmony/LeftSidebar'
 import type { RightSidebarSection } from '../components/harmony/RightSidebar'
 import './ProjectUserFlowPage.css'
+
+const CREATE_BUDGET_TABS = [
+  { id: 'create-budget', label: 'Create Budget' },
+  { id: 'create-eac', label: 'Create EAC' },
+] as const
+
+const CREATE_BUDGET_SEGMENTS = [
+  { id: 'hours', label: 'Hours' },
+  { id: 'amount', label: 'Amount' },
+  { id: 'staff-escalation', label: 'Staff Escalation' },
+  { id: 'analysis-by-period', label: 'Analysis By Period' },
+] as const
+
+const PROJECT_CREATED_MESSAGE = 'Project Budget/EAC created'
 
 const LEFT_SECTIONS: LeftSidebarSection[] = [
   {
@@ -495,8 +514,57 @@ export function ProjectUserFlowPage() {
   const [selectedWbsId, setSelectedWbsId] = useState(PROJECT_WBS_ROWS[1]?.id ?? PROJECT_WBS_ROWS[0]?.id ?? '')
   const [selectedResourceId, setSelectedResourceId] = useState(BUDGET_RESOURCE_ROWS[0]?.id ?? '')
   const [activeCellColumn, setActiveCellColumn] = useState<BudgetTableColumn>('id')
+  const [createBudgetTab, setCreateBudgetTab] = useState<(typeof CREATE_BUDGET_TABS)[number]['id']>(
+    'create-budget',
+  )
+  const [createBudgetSegment, setCreateBudgetSegment] = useState<
+    (typeof CREATE_BUDGET_SEGMENTS)[number]['id']
+  >('hours')
+  const [commitDialogOpen, setCommitDialogOpen] = useState(false)
+  const [commitDialogMode, setCommitDialogMode] = useState<'budget' | 'eac'>('budget')
+  const [commitWorkflow, setCommitWorkflow] = useState<
+    'commit' | 'complete' | 'approve'
+  >('commit')
+  const [markAsFinal, setMarkAsFinal] = useState(false)
+  const [createEacEnabled, setCreateEacEnabled] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [projectCreated, setProjectCreated] = useState(false)
   const isWbsStep = wizardStep === 1
   const isCreateStep = wizardStep === 2
+  const isEacTab = createBudgetTab === 'create-eac'
+
+  const openCommitDialog = (mode: 'budget' | 'eac') => {
+    setCommitDialogMode(mode)
+    setCommitDialogOpen(true)
+  }
+
+  const closeCommitDialog = () => {
+    setCommitDialogOpen(false)
+    setMarkAsFinal(false)
+    setCommitWorkflow('commit')
+  }
+
+  const handleCommitSave = (switchToEac: boolean) => {
+    if (commitDialogMode === 'eac') {
+      if (markAsFinal) {
+        setCreateBudgetTab('create-eac')
+        setProjectCreated(false)
+        setToastMessage('Eacs successfully marked as final')
+      }
+      closeCommitDialog()
+      return
+    }
+
+    if (markAsFinal) {
+      setCreateEacEnabled(true)
+      setToastMessage('Budget successfully marked as final')
+    }
+    if (switchToEac) {
+      setCreateEacEnabled(true)
+      setCreateBudgetTab('create-eac')
+    }
+    closeCommitDialog()
+  }
 
   const wizardSteps = BUDGET_WIZARD_STEP_LABELS.map((label, index) => {
     if (index === 0 && wizardStep > 0) {
@@ -534,6 +602,15 @@ export function ProjectUserFlowPage() {
   const goToStep = (step: number) => {
     setWizardStep(step)
     setActiveCellColumn(step === 2 ? 'type' : 'id')
+  }
+
+  const handleFooterPrimaryAction = () => {
+    if (!isCreateStep) {
+      goToStep(Math.min(wizardStep + 1, BUDGET_WIZARD_STEP_LABELS.length - 1))
+      return
+    }
+    setToastMessage(PROJECT_CREATED_MESSAGE)
+    setProjectCreated(true)
   }
 
   const floatingNavActions = (
@@ -1036,6 +1113,21 @@ export function ProjectUserFlowPage() {
         </header>
 
         <div className="budget-window__body">
+          {toastMessage ? (
+            <div className="budget-window__toast" role="status">
+              <Alert
+                variant="success"
+                style="enhanced"
+                title="Message(s)"
+                dismissible
+                onDismiss={() => setToastMessage(null)}
+                className="budget-window__toast-alert"
+              >
+                {toastMessage}
+              </Alert>
+            </div>
+          ) : null}
+
           <div className="budget-wizard">
             <Stepper
               className="budget-wizard__stepper"
@@ -1045,6 +1137,101 @@ export function ProjectUserFlowPage() {
               nonLinear
             />
           </div>
+
+          {isCreateStep ? (
+            <div className="budget-create-chrome">
+              <div className="budget-create-chrome__tabs-row">
+                <TabStrip
+                  className={`budget-create-tabs${
+                    createEacEnabled ? ' budget-create-tabs--eac-enabled' : ''
+                  }`}
+                  overflowMode="none"
+                  tabs={CREATE_BUDGET_TABS.map((tab) => ({
+                    ...tab,
+                    active: tab.id === createBudgetTab,
+                    disabled: tab.id === 'create-eac' && !createEacEnabled,
+                  }))}
+                  onTabSelected={(tabId) => {
+                    setCreateBudgetTab(tabId as (typeof CREATE_BUDGET_TABS)[number]['id'])
+                  }}
+                />
+                <div className="budget-create-chrome__actions">
+                  {isEacTab ? (
+                    projectCreated ? (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="budget-create-chrome__secondary"
+                      >
+                        Create New Version
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled
+                          className="budget-create-chrome__muted"
+                        >
+                          Modify
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="budget-create-chrome__secondary"
+                        >
+                          Create New Version
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="budget-create-chrome__commit"
+                          onClick={() => openCommitDialog('eac')}
+                        >
+                          Commit EAC
+                        </Button>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <Button size="sm" variant="outline" disabled className="budget-create-chrome__muted">
+                        Create New Version
+                      </Button>
+                      <Button size="sm" variant="outline" disabled className="budget-create-chrome__muted">
+                        Inspect
+                      </Button>
+                      <Button size="sm" variant="outline" disabled className="budget-create-chrome__muted">
+                        Recalc
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="budget-create-chrome__commit"
+                        onClick={() => openCommitDialog('budget')}
+                      >
+                        Commit Budget
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="budget-create-chrome__segments">
+                <ButtonGroup variant="default" size="sm" className="budget-create-segments">
+                  {CREATE_BUDGET_SEGMENTS.map((segment) => (
+                    <Button
+                      key={segment.id}
+                      size="sm"
+                      buttonType="theme"
+                      variant={createBudgetSegment === segment.id ? 'primary' : 'outline'}
+                      aria-pressed={createBudgetSegment === segment.id}
+                      onClick={() => setCreateBudgetSegment(segment.id)}
+                    >
+                      {segment.label}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+              </div>
+            </div>
+          ) : null}
 
           <div className="budget-toolbar">
             {isCreateStep ? (
@@ -1124,21 +1311,11 @@ export function ProjectUserFlowPage() {
               </div>
             </div>
           ) : (
-            <div
-              className={`budget-table-shell${isWbsStep ? ' budget-table-shell--scroll' : ''}`}
-              style={
-                isWbsStep
-                  ? {
-                      overflowX: 'scroll',
-                      overflowY: 'hidden',
-                      maxWidth: '100%',
-                      width: '100%',
-                    }
-                  : undefined
-              }
-            >
+            <div className="budget-table-shell budget-table-shell--scroll">
               <Table
-                className={`budget-table${isWbsStep ? ' budget-table--wbs' : ''}`}
+                className={`budget-table ${
+                  isWbsStep ? 'budget-table--wbs' : 'budget-table--projects'
+                }`}
                 headerVariant="gray"
                 header={tableHeader}
                 body={tableBody}
@@ -1159,15 +1336,92 @@ export function ProjectUserFlowPage() {
             <Button
               size="sm"
               className="budget-window__next"
-              onClick={() =>
-                goToStep(Math.min(wizardStep + 1, BUDGET_WIZARD_STEP_LABELS.length - 1))
-              }
+              disabled={isCreateStep && projectCreated}
+              onClick={handleFooterPrimaryAction}
             >
-              Next
+              {isCreateStep ? 'Save' : 'Next'}
             </Button>
           </footer>
         </div>
       </section>
+
+      <Dialog
+        id="commit-budget-dialog"
+        title={commitDialogMode === 'eac' ? 'Commit EAC' : 'Commit Budget'}
+        open={commitDialogOpen}
+        onClose={closeCommitDialog}
+        resizable={false}
+        className="commit-budget-dialog"
+        footer={
+          <div className="commit-budget-dialog__footer-actions">
+            <Button size="sm" onClick={() => handleCommitSave(false)}>
+              Save
+            </Button>
+            {commitDialogMode === 'budget' ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleCommitSave(true)}
+              >
+                Save and create EAC
+              </Button>
+            ) : null}
+            <Button size="sm" variant="secondary" onClick={closeCommitDialog}>
+              Cancel
+            </Button>
+          </div>
+        }
+      >
+        <fieldset className="commit-budget-dialog__workflow">
+          <legend>Workflow</legend>
+          <p>
+            {commitDialogMode === 'eac'
+              ? 'You are about to commit the EAC. Would you like to apply any other workflow actions?'
+              : 'You are about to commit the budget. Would you like to apply any other workflow actions?'}
+          </p>
+          <div className="commit-budget-dialog__options">
+            <div>
+              <RadioButton
+                name="commit-budget-workflow"
+                value="commit"
+                label="Commit"
+                size="small"
+                checked={commitWorkflow === 'commit'}
+                onChange={() => setCommitWorkflow('commit')}
+              />
+              <Checkbox
+                label="Mark as Final"
+                checked={markAsFinal}
+                disabled={commitWorkflow !== 'commit'}
+                onChange={(event) => setMarkAsFinal(event.target.checked)}
+                className="commit-budget-dialog__mark-final"
+              />
+            </div>
+            <RadioButton
+              name="commit-budget-workflow"
+              value="complete"
+              label="Commit and Complete"
+              size="small"
+              checked={commitWorkflow === 'complete'}
+              onChange={() => {
+                setCommitWorkflow('complete')
+                setMarkAsFinal(false)
+              }}
+            />
+            <RadioButton
+              name="commit-budget-workflow"
+              value="approve"
+              label="Commit, Complete and Approve"
+              size="small"
+              checked={commitWorkflow === 'approve'}
+              onChange={() => {
+                setCommitWorkflow('approve')
+                setMarkAsFinal(false)
+              }}
+            />
+          </div>
+        </fieldset>
+      </Dialog>
     </ShellLayout>
   )
 }
