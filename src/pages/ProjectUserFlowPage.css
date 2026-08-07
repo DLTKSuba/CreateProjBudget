@@ -1638,12 +1638,13 @@
 
 .budget-window__toast {
   position: absolute;
-  top: 10px;
+  top: 4px;
   left: 50%;
-  z-index: 20;
+  z-index: 30;
   width: min(420px, calc(100% - 32px));
   transform: translateX(-50%);
   pointer-events: auto;
+  animation: budget-toast-lifecycle 5s ease both;
 }
 
 .budget-window__toast-alert.alert {
@@ -1652,11 +1653,11 @@
 
 .budget-window__toast-alert.alert--enhanced .alert__border {
   width: 6px;
-  background-color: #2e7d32;
+  background-color: #17a871;
 }
 
 .budget-window__toast-alert.alert--success .alert__icon {
-  color: #2e7d32;
+  color: #17a871;
 }
 
 .budget-window__toast-alert .alert__title {
@@ -1668,6 +1669,42 @@
 .budget-window__toast-alert .alert__message {
   font-size: 12px;
   color: #525969;
+}
+
+@keyframes budget-toast-lifecycle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+
+  8%,
+  88% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .budget-window__toast {
+    animation-name: budget-toast-fade;
+  }
+}
+
+@keyframes budget-toast-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  2%,
+  94% {
+    opacity: 1;
+  }
 }
 
 .budget-table-shell.budget-table-shell--scroll {

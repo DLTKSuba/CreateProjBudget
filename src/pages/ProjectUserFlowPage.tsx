@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert } from '../components/harmony/Alert'
 import { Button } from '../components/harmony/Button'
 import { ButtonGroup } from '../components/harmony/ButtonGroup'
@@ -532,6 +532,16 @@ export function ProjectUserFlowPage() {
   const isWbsStep = wizardStep === 1
   const isCreateStep = wizardStep === 2
   const isEacTab = createBudgetTab === 'create-eac'
+
+  useEffect(() => {
+    if (!toastMessage) return
+
+    const dismissTimer = window.setTimeout(() => {
+      setToastMessage(null)
+    }, 5000)
+
+    return () => window.clearTimeout(dismissTimer)
+  }, [toastMessage])
 
   const openCommitDialog = (mode: 'budget' | 'eac') => {
     setCommitDialogMode(mode)
@@ -1094,6 +1104,21 @@ export function ProjectUserFlowPage() {
       <div className="project-user-flow-bg" aria-hidden="true" />
 
       <section className="project-window budget-window" aria-labelledby="project-window-title">
+        {toastMessage ? (
+          <div key={toastMessage} className="budget-window__toast" role="status">
+            <Alert
+              variant="success"
+              style="enhanced"
+              title="Message(s)"
+              dismissible
+              onDismiss={() => setToastMessage(null)}
+              className="budget-window__toast-alert"
+            >
+              {toastMessage}
+            </Alert>
+          </div>
+        ) : null}
+
         <header className="project-window__titlebar budget-window__titlebar">
           <h1 id="project-window-title">Projects Budget /EAC</h1>
           <div className="budget-window__title-actions">
@@ -1113,21 +1138,6 @@ export function ProjectUserFlowPage() {
         </header>
 
         <div className="budget-window__body">
-          {toastMessage ? (
-            <div className="budget-window__toast" role="status">
-              <Alert
-                variant="success"
-                style="enhanced"
-                title="Message(s)"
-                dismissible
-                onDismiss={() => setToastMessage(null)}
-                className="budget-window__toast-alert"
-              >
-                {toastMessage}
-              </Alert>
-            </div>
-          ) : null}
-
           <div className="budget-wizard">
             <Stepper
               className="budget-wizard__stepper"
