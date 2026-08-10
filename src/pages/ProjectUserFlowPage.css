@@ -32,6 +32,21 @@
   gap: 10px;
 }
 
+.project-user-flow-shell .budget-header-reset.btn {
+  min-height: 28px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #2f6fad;
+  background: #fff;
+  border-color: #4c92d9;
+}
+
+.project-user-flow-shell .budget-header-reset.btn:hover {
+  background: #eef5fb;
+  color: #2f6fad;
+  border-color: #4c92d9;
+}
+
 .project-user-flow-shell .header__actions .divider {
   display: none;
 }
@@ -1860,16 +1875,25 @@
   box-shadow: none;
 }
 
+.budget-window .budget-wizard__stepper .step__label {
+  align-items: center;
+  width: 100%;
+  text-align: center;
+}
+
 .budget-window .budget-wizard__stepper .step__label-text {
   margin-top: 2px;
+  width: 100%;
   color: #9aa3af;
   font-size: 12px;
   font-weight: 500;
+  text-align: center;
 }
 
 .budget-window .budget-wizard__stepper .step__description {
   margin-top: 2px;
-  max-width: 220px;
+  width: 100%;
+  max-width: 100%;
   color: #9aa3af;
   font-size: 11px;
   font-weight: 400;
@@ -2003,7 +2027,8 @@
   cursor: not-allowed;
 }
 
-.budget-create-tabs--eac-enabled .tab[data-tab-id='create-eac']:not(.is-active):not(.tab--disabled) {
+.budget-create-tabs--eac-enabled .tab[data-tab-id='create-eac']:not(.is-active):not(.tab--disabled),
+.budget-create-tabs--eac-enabled .tab[data-tab-id='create-budget']:not(.is-active) {
   color: #525969;
 }
 

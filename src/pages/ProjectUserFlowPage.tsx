@@ -104,7 +104,8 @@ const BUDGET_WIZARD_STEP_LABELS = [
 
 function formatSelectedProjectCaption(projectId: string) {
   const digits = projectId.replace(/^PROJ-?/i, '')
-  return `Proj ${digits}`
+  const projectName = PROJECT_BUDGET_ROWS.find((row) => row.id === projectId)?.name ?? ''
+  return projectName ? `Proj ${digits} ${projectName}` : `Proj ${digits}`
 }
 
 type ProjectBudgetRow = {
@@ -418,7 +419,17 @@ function formatSelectedWbsCaption(wbsId: string) {
   const digits = wbsId.replace(/^PROJ-?/i, '')
   const wbsName = PROJECT_WBS_ROWS.find((row) => row.id === wbsId)?.name ?? ''
   if (!wbsName) return digits
-  return `${digits} ${wbsName.slice(0, 10)}...`
+  return `${digits} ${wbsName}`
+}
+
+const PRESET_COMPLETE_PROJECT_ID = 'PROJ-000000000000010'
+
+function isWbsEndingInDot2(wbsId: string) {
+  return /\.2$/.test(wbsId)
+}
+
+function isPresetCompleteSelection(projectId: string, wbsId: string) {
+  return projectId === PRESET_COMPLETE_PROJECT_ID && isWbsEndingInDot2(wbsId)
 }
 
 type BudgetTableColumn = string
@@ -538,18 +549,42 @@ export function ProjectUserFlowPage() {
   const [projectCreated, setProjectCreated] = useState(false)
   const [budgetCommitted, setBudgetCommitted] = useState(false)
   const [eacCommitted, setEacCommitted] = useState(false)
+  const [budgetMarkedFinal, setBudgetMarkedFinal] = useState(false)
+  const [eacMarkedFinal, setEacMarkedFinal] = useState(false)
+  const [finalizedWbsKeys, setFinalizedWbsKeys] = useState<string[]>([])
   const isWbsStep = wizardStep === 1
   const isCreateStep = wizardStep === 2
   const isEacTab = createBudgetTab === 'create-eac'
 
   const selectedWbs = PROJECT_WBS_ROWS.find((row) => row.id === selectedWbsId)
-  const createStepVersion = selectedWbs?.version || 'V1'
-  const createStepStatus = 'Final'
+  const presetComplete = isPresetCompleteSelection(selectedProjectId, selectedWbsId)
+  const isWbsFinalized = (projectId: string, wbsId: string) =>
+    finalizedWbsKeys.includes(`${projectId}::${wbsId}`)
+  const selectionFinalized = isWbsFinalized(selectedProjectId, selectedWbsId)
+  const createStepVersion =
+    presetComplete || selectionFinalized ? 'V2' : selectedWbs?.version || 'V1'
+  const budgetStatus =
+    presetComplete || selectionFinalized || budgetMarkedFinal ? 'Final' : 'Committed'
+  const eacStatus =
+    presetComplete || selectionFinalized || eacMarkedFinal ? 'Final' : 'Committed'
 
   const formatCreateStepCaption = (includeEac: boolean) => {
-    const budCaption = `Bud / ${createStepVersion} / ${createStepStatus}`
+    const budCaption = `Bud / ${createStepVersion} / ${budgetStatus}`
     if (!includeEac) return budCaption
-    return `${budCaption} - EAC / ${createStepVersion} / ${createStepStatus}`
+    return `${budCaption} - EAC / ${createStepVersion} / ${eacStatus}`
+  }
+
+  const applyPresetCompleteSelection = (projectId: string, wbsId: string) => {
+    if (!isPresetCompleteSelection(projectId, wbsId)) return false
+
+    setSelectedProjectId(projectId)
+    setSelectedWbsId(wbsId)
+    setCreateEacEnabled(true)
+    setBudgetCommitted(true)
+    setEacCommitted(true)
+    setProjectCreated(true)
+    setToastMessage(null)
+    return true
   }
 
   useEffect(() => {
@@ -579,6 +614,7 @@ export function ProjectUserFlowPage() {
         setCreateBudgetTab('create-eac')
         setProjectCreated(false)
         setEacCommitted(true)
+        setEacMarkedFinal(true)
         setToastMessage('Eacs successfully marked as final')
       }
       closeCommitDialog()
@@ -588,6 +624,7 @@ export function ProjectUserFlowPage() {
     if (markAsFinal) {
       setCreateEacEnabled(true)
       setBudgetCommitted(true)
+      setBudgetMarkedFinal(true)
       setToastMessage('Budget successfully marked as final')
     }
     if (switchToEac) {
@@ -599,6 +636,27 @@ export function ProjectUserFlowPage() {
   }
 
   const wizardSteps = BUDGET_WIZARD_STEP_LABELS.map((label, index) => {
+    if (presetComplete) {
+      if (index === 0) {
+        return {
+          label: 'Selected Project',
+          description: formatSelectedProjectCaption(selectedProjectId),
+          completed: true,
+        }
+      }
+      if (index === 1) {
+        return {
+          label: 'Selected WBS',
+          description: formatSelectedWbsCaption(selectedWbsId),
+          completed: true,
+        }
+      }
+      return {
+        label,
+        description: formatCreateStepCaption(true),
+        completed: true,
+      }
+    }
     if (index === 0 && wizardStep > 0) {
       return {
         label: 'Selected Project',
@@ -625,11 +683,19 @@ export function ProjectUserFlowPage() {
   })
 
   const selectProjectCell = (projectId: string, column: BudgetTableColumn) => {
+    if (applyPresetCompleteSelection(projectId, selectedWbsId)) {
+      setActiveCellColumn(column)
+      return
+    }
     setSelectedProjectId(projectId)
     setActiveCellColumn(column)
   }
 
   const selectWbsCell = (wbsId: string, column: BudgetTableColumn) => {
+    if (applyPresetCompleteSelection(selectedProjectId, wbsId)) {
+      setActiveCellColumn(column)
+      return
+    }
     setSelectedWbsId(wbsId)
     setActiveCellColumn(column)
   }
@@ -639,7 +705,36 @@ export function ProjectUserFlowPage() {
     setActiveCellColumn(column)
   }
 
+  const resetWizardToSelectProject = () => {
+    setWizardStep(0)
+    setSelectedProjectId(PROJECT_BUDGET_ROWS[0]?.id ?? '')
+    setSelectedWbsId(PROJECT_WBS_ROWS[0]?.id ?? '')
+    setSelectedResourceId(BUDGET_RESOURCE_ROWS[0]?.id ?? '')
+    setActiveCellColumn('id')
+    setCreateBudgetTab('create-budget')
+    setCreateBudgetSegment('hours')
+    setCommitDialogOpen(false)
+    setCommitDialogMode('budget')
+    setCommitWorkflow('commit')
+    setMarkAsFinal(false)
+    setCreateEacEnabled(false)
+    setToastMessage(null)
+    setProjectCreated(false)
+    setBudgetCommitted(false)
+    setEacCommitted(false)
+    setBudgetMarkedFinal(false)
+    setEacMarkedFinal(false)
+  }
+
+  const handleResetStatuses = () => {
+    setFinalizedWbsKeys([])
+  }
+
   const goToStep = (step: number) => {
+    if (step === 0) {
+      resetWizardToSelectProject()
+      return
+    }
     setWizardStep(step)
     setActiveCellColumn(step === 2 ? 'type' : 'id')
   }
@@ -651,6 +746,9 @@ export function ProjectUserFlowPage() {
     }
     setToastMessage(PROJECT_CREATED_MESSAGE)
     setProjectCreated(true)
+
+    const finalizedKey = `${selectedProjectId}::${selectedWbsId}`
+    setFinalizedWbsKeys((keys) => (keys.includes(finalizedKey) ? keys : [...keys, finalizedKey]))
   }
 
   const floatingNavActions = (
@@ -804,6 +902,9 @@ export function ProjectUserFlowPage() {
         : isWbsStep
         ? PROJECT_WBS_ROWS.map((row) => {
             const isSelected = row.id === selectedWbsId
+            const isPresetCompleteWbs = isPresetCompleteSelection(selectedProjectId, row.id)
+            const showFinalStatus =
+              isPresetCompleteWbs || isWbsFinalized(selectedProjectId, row.id)
             const cellClass = (column: BudgetTableColumn, extra?: string) =>
               [extra, isSelected && activeCellColumn === column ? 'is-active-cell' : undefined]
                 .filter(Boolean)
@@ -865,7 +966,7 @@ export function ProjectUserFlowPage() {
                     selectWbsCell(row.id, 'version')
                   }}
                 >
-                  {row.version}
+                  {showFinalStatus ? 'V2' : row.version}
                 </td>
                 <td
                   className={cellClass('versionCode')}
@@ -883,7 +984,7 @@ export function ProjectUserFlowPage() {
                     selectWbsCell(row.id, 'status')
                   }}
                 >
-                  {row.status}
+                  {showFinalStatus ? 'Final' : row.status}
                 </td>
                 <td
                   className={cellClass('closedPeriod')}
@@ -1120,6 +1221,16 @@ export function ProjectUserFlowPage() {
         { id: 'ati', name: 'Applied Technologies Inc', color: '#f66e57' },
         { id: 'deltek', name: 'Deltek Demo Company', color: '#4c92d9' },
       ]}
+      beforeCompanyPicker={
+        <Button
+          size="sm"
+          variant="secondary"
+          className="budget-header-reset"
+          onClick={handleResetStatuses}
+        >
+          Reset
+        </Button>
+      }
       showFooter={false}
       showFloatingNav
       floatingNavActions={floatingNavActions}
