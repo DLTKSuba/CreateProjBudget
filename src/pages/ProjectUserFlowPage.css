@@ -1833,18 +1833,21 @@
   box-shadow: 0 0 0 6px rgba(76, 146, 217, 0.22);
 }
 
-.budget-window .budget-wizard__stepper .step.is-completed .step__indicator {
+.budget-window .budget-wizard__stepper .step.is-completed .step__indicator,
+.budget-window .budget-wizard__stepper .step.is-active.is-completed .step__indicator {
   background: #2e9b4f;
   border-color: #2e9b4f;
   color: #fff;
   box-shadow: 0 0 0 6px rgba(46, 155, 79, 0.18);
 }
 
-.budget-window .budget-wizard__stepper .step.is-completed .step__number {
+.budget-window .budget-wizard__stepper .step.is-completed .step__number,
+.budget-window .budget-wizard__stepper .step.is-active.is-completed .step__number {
   display: none;
 }
 
-.budget-window .budget-wizard__stepper .step.is-completed .step__check {
+.budget-window .budget-wizard__stepper .step.is-completed .step__check,
+.budget-window .budget-wizard__stepper .step.is-active.is-completed .step__check {
   display: block;
   color: #fff;
 }
@@ -1866,10 +1869,13 @@
 
 .budget-window .budget-wizard__stepper .step__description {
   margin-top: 2px;
+  max-width: 220px;
   color: #9aa3af;
   font-size: 11px;
   font-weight: 400;
   line-height: 1.2;
+  text-align: center;
+  white-space: normal;
 }
 
 .budget-window .budget-wizard__stepper .step.is-active .step__label,

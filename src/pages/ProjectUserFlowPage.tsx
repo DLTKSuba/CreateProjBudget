@@ -414,6 +414,13 @@ const PROJECT_WBS_ROWS: ProjectWbsRow[] = [
   },
 ]
 
+function formatSelectedWbsCaption(wbsId: string) {
+  const digits = wbsId.replace(/^PROJ-?/i, '')
+  const wbsName = PROJECT_WBS_ROWS.find((row) => row.id === wbsId)?.name ?? ''
+  if (!wbsName) return digits
+  return `${digits} ${wbsName.slice(0, 10)}...`
+}
+
 type BudgetTableColumn = string
 
 const BUDGET_RESOURCE_PERIODS = [
@@ -529,9 +536,21 @@ export function ProjectUserFlowPage() {
   const [createEacEnabled, setCreateEacEnabled] = useState(false)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [projectCreated, setProjectCreated] = useState(false)
+  const [budgetCommitted, setBudgetCommitted] = useState(false)
+  const [eacCommitted, setEacCommitted] = useState(false)
   const isWbsStep = wizardStep === 1
   const isCreateStep = wizardStep === 2
   const isEacTab = createBudgetTab === 'create-eac'
+
+  const selectedWbs = PROJECT_WBS_ROWS.find((row) => row.id === selectedWbsId)
+  const createStepVersion = selectedWbs?.version || 'V1'
+  const createStepStatus = 'Final'
+
+  const formatCreateStepCaption = (includeEac: boolean) => {
+    const budCaption = `Bud / ${createStepVersion} / ${createStepStatus}`
+    if (!includeEac) return budCaption
+    return `${budCaption} - EAC / ${createStepVersion} / ${createStepStatus}`
+  }
 
   useEffect(() => {
     if (!toastMessage) return
@@ -559,6 +578,7 @@ export function ProjectUserFlowPage() {
       if (markAsFinal) {
         setCreateBudgetTab('create-eac')
         setProjectCreated(false)
+        setEacCommitted(true)
         setToastMessage('Eacs successfully marked as final')
       }
       closeCommitDialog()
@@ -567,10 +587,12 @@ export function ProjectUserFlowPage() {
 
     if (markAsFinal) {
       setCreateEacEnabled(true)
+      setBudgetCommitted(true)
       setToastMessage('Budget successfully marked as final')
     }
     if (switchToEac) {
       setCreateEacEnabled(true)
+      setBudgetCommitted(true)
       setCreateBudgetTab('create-eac')
     }
     closeCommitDialog()
@@ -587,8 +609,16 @@ export function ProjectUserFlowPage() {
     if (index === 1 && wizardStep > 1) {
       return {
         label: 'Selected WBS',
-        description: selectedWbsId,
+        description: formatSelectedWbsCaption(selectedWbsId),
         completed: true,
+      }
+    }
+    if (index === 2 && projectCreated && budgetCommitted) {
+      const bothCreated = eacCommitted
+      return {
+        label,
+        description: formatCreateStepCaption(bothCreated),
+        completed: bothCreated,
       }
     }
     return { label }
