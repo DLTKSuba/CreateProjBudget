@@ -1856,6 +1856,12 @@
   box-shadow: 0 0 0 6px rgba(46, 155, 79, 0.18);
 }
 
+/* The step the user is actually on stays green but gets a solid dark green ring
+   in the fill colour, so "you are here" reads even when everything is complete. */
+.budget-window .budget-wizard__stepper .step.is-active.is-completed .step__indicator {
+  box-shadow: 0 0 0 3px #2e9b4f;
+}
+
 .budget-window .budget-wizard__stepper .step.is-completed .step__number,
 .budget-window .budget-wizard__stepper .step.is-active.is-completed .step__number {
   display: none;
@@ -1908,6 +1914,491 @@
 .budget-window .budget-wizard__stepper .step.is-completed .step__label-text {
   color: #373f4e;
   font-weight: 600;
+}
+
+.budget-table-shell .table.budget-table.budget-table--wbs.budget-table--resizable {
+  table-layout: fixed !important;
+  width: var(--wbs-table-width) !important;
+  min-width: var(--wbs-table-width) !important;
+  max-width: none !important;
+}
+
+.budget-table--resizable th,
+.budget-table--resizable td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.budget-table--resizable th {
+  position: relative;
+}
+
+.budget-table--resizable .wbs-tree__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.column-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 4;
+}
+
+.column-resizer::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  right: 2px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+}
+
+.column-resizer:hover::after,
+body.is-column-resizing .column-resizer:active::after {
+  background: #2563eb;
+}
+
+body.is-column-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.budget-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.project-user-flow-shell .budget-header-version .dropdown__trigger {
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #c6d2e0;
+  border-radius: 4px;
+  background: #fff;
+  color: #2f6fad;
+}
+
+.project-user-flow-shell .budget-header-version .dropdown__trigger:hover {
+  border-color: #4c92d9;
+  background: #eef5fb;
+}
+
+.budget-table--wbs-tree .wbs-tree__head-cell {
+  min-width: 320px;
+}
+
+.wbs-tree__cell {
+  white-space: nowrap;
+}
+
+.wbs-tree__cell-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wbs-tree__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #475569;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wbs-tree__toggle:hover {
+  background: #e2e8f0;
+  color: #1f2733;
+}
+
+/* Occupies the chevron slot so Bud / EAC start on the project ID, not the arrow. */
+.wbs-tree__toggle-spacer {
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.wbs-tree__id {
+  font-weight: 600;
+  color: #1f2733;
+}
+
+.wbs-tree__name {
+  color: #6b7688;
+}
+
+.wbs-tree__row--wbs > td {
+  background: #fbfcfe;
+}
+
+.wbs-tree__row--leaf > td {
+  background: #fff;
+  color: #475569;
+}
+
+.wbs-tree__row--wbs,
+.wbs-tree__row--leaf {
+  cursor: pointer;
+}
+
+.wbs-tree__cell--leaf {
+  position: relative;
+}
+
+/* Bud / EAC rows are sub-headers, so they borrow the Harmony column header type. */
+.wbs-tree__leaf-label {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Chip fill only — transparent border keeps the Harmony pill metrics intact.
+   Working keeps body text colour; Final/success keep Harmony's green chip text. */
+.budget-status-pill {
+  text-transform: none;
+  border-color: transparent;
+}
+
+/* Status text stays in body grey on every chip; the fill carries the meaning. */
+.budget-status-pill.badge--warning,
+.budget-status-pill--final.badge--success {
+  color: var(--text-primary);
+}
+
+/* Final uses the light alert green so it stays distinct from the dark green
+   the wizard stepper uses for completed steps. */
+.budget-status-pill--final.badge--success {
+  background-color: var(--color-success-light);
+}
+
+.budget-table--wbs-tree tbody tr.is-selected > td {
+  background: #e8f1fb;
+}
+
+/* Totals use the Harmony light blue total-row fill. */
+.budget-table__totals-row {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+/* The surrounding table paints cell backgrounds with !important, so the
+   totals row has to match that weight. */
+.budget-table-shell .table tbody tr.budget-table__totals-row > td,
+.budget-table-shell .table tbody tr.budget-table__totals-row > td:first-child,
+.budget-table-shell .table tbody tr.budget-table__totals-row > td.budget-table__lead-col,
+.budget-table-shell .table tbody tr.budget-table__totals-row:hover > td {
+  background: linear-gradient(var(--table-total-bg), var(--table-total-bg)),
+    var(--surface-bg) !important;
+  color: var(--text-primary) !important;
+  border-top: 2px solid var(--theme-primary) !important;
+  font-weight: var(--font-normal);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: default;
+}
+
+.budget-table__totals-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.budget-table__sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.budget-table__head--grouped .budget-table__group {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+}
+
+.budget-table__head--grouped .budget-table__group--wbs {
+  color: #475569;
+  background: rgba(71, 85, 105, 0.07);
+  border-bottom-color: #94a3b8;
+}
+
+.budget-table__head--grouped .budget-table__group--budget {
+  color: #1d4ed8;
+  background: rgba(29, 78, 216, 0.07);
+  border-bottom-color: #1d4ed8;
+}
+
+.budget-table__head--grouped .budget-table__group--eac {
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.07);
+  border-bottom-color: #7c3aed;
+}
+
+.budget-table__head--grouped .budget-table__group--shared {
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.08);
+  border-bottom-color: #0f766e;
+}
+
+.budget-table__head--grouped .budget-table__group--detail {
+  color: #6d28d9;
+  background: rgba(109, 40, 217, 0.07);
+  border-bottom-color: #8b5cf6;
+}
+
+.budget-table--wbs .budget-table__group-start {
+  border-left: 1px solid #cbd5e1;
+}
+
+.budget-table--wbs thead th {
+  white-space: nowrap;
+}
+
+.budget-table--wbs tbody td {
+  white-space: nowrap;
+}
+
+.budget-table__sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.budget-table__num .budget-table__sort-btn {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.budget-table__sort-icon {
+  font-size: 9px;
+  opacity: 0.45;
+  line-height: 1;
+}
+
+.budget-table__sortable.is-sorted .budget-table__sort-icon {
+  opacity: 1;
+}
+
+.budget-table__sortable.is-sorted .budget-table__sort-btn {
+  color: #2563eb;
+}
+
+.wbs-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.wbs-health__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.wbs-health--ok {
+  color: #17a871;
+  background: rgba(23, 168, 113, 0.12);
+}
+
+.wbs-health--warn {
+  color: #b7791f;
+  background: rgba(214, 158, 46, 0.16);
+}
+
+.wbs-health--over {
+  color: #c53030;
+  background: rgba(197, 48, 48, 0.12);
+}
+
+td.wbs-health--ok {
+  color: #17a871;
+  background: transparent;
+}
+
+td.wbs-health--warn {
+  color: #b7791f;
+  background: transparent;
+}
+
+td.wbs-health--over {
+  color: #c53030;
+  background: transparent;
+}
+
+td.budget-table__num.wbs-health--ok,
+td.budget-table__num.wbs-health--warn,
+td.budget-table__num.wbs-health--over {
+  font-weight: 600;
+}
+
+.wbs-progress {
+  display: inline-block;
+  width: 70px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e6ebf2;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.wbs-progress__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #17a871;
+}
+
+.wbs-progress__fill.wbs-health--warn {
+  background: #d69e2e;
+}
+
+.wbs-progress__fill.wbs-health--over {
+  background: #c53030;
+}
+
+.wbs-progress__value {
+  font-variant-numeric: tabular-nums;
+}
+
+.wbs-detail {
+  flex-shrink: 0;
+  margin-top: 12px;
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.wbs-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f4f6fb;
+  border-bottom: 1px solid #dce3ec;
+}
+
+.wbs-detail__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wbs-detail__title-id {
+  color: #2f6fad;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wbs-detail__title-name {
+  color: #525969;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wbs-detail__tabs.btn-group {
+  border-color: #4c92d9;
+  background: #fff;
+  padding: 2px;
+  gap: 0;
+}
+
+.wbs-detail__tabs .btn {
+  min-height: 26px;
+  min-width: 56px;
+  padding: 3px 14px;
+  font-size: 12px;
+  border: none !important;
+  box-shadow: none;
+}
+
+.wbs-detail__tabs .btn--outline {
+  color: #2f6fad;
+  background: transparent;
+}
+
+.wbs-detail__tabs .btn--primary {
+  background: #4c92d9;
+  color: #fff;
+}
+
+.wbs-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  margin: 0;
+  padding: 10px 12px;
+  background: #e7e7f6;
+}
+
+.wbs-detail__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  background: #fff;
+}
+
+.wbs-detail__label {
+  color: #8a93a2;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.wbs-detail__value {
+  margin: 0;
+  color: #373f4e;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@media (max-width: 1080px) {
+  .wbs-detail__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .budget-window .budget-wizard__stepper.stepper--horizontal .step__connector {
@@ -2306,16 +2797,17 @@
   background: #ffffff !important;
 }
 
-/* Selected / highlighted row — #E6EBED fill, #4C92D9 row outline */
+/* Selected / highlighted row — light neutral fill with a Harmony primary blue
+   outline. Light blue is reserved for the totals row. */
 .budget-table-shell .table tbody tr.is-selected,
 .budget-table-shell .table tbody tr.table-row--selected {
-  background: #e6ebed !important;
+  background: var(--alert-chip-disabled-bg) !important;
 }
 
 .budget-table-shell .table tbody tr.is-selected > td,
 .budget-table-shell .table tbody tr.table-row--selected > td {
-  background: #e6ebed !important;
-  border-color: #4c92d9 !important;
+  background: var(--alert-chip-disabled-bg) !important;
+  border-color: var(--theme-primary) !important;
   border-top-width: 1px !important;
   border-bottom-width: 1px !important;
   border-right-width: 1px !important;
@@ -2328,13 +2820,13 @@
 .budget-table-shell .table tbody tr.is-selected > td.budget-table__lead-col,
 .budget-table-shell .table tbody tr.table-row--selected > td.budget-table__lead-col {
   background: #ffffff !important;
-  border-left-color: #4c92d9 !important;
+  border-left-color: var(--theme-primary) !important;
   border-left-width: 1px !important;
 }
 
 .budget-table-shell .table tbody tr.is-selected > td:last-child,
 .budget-table-shell .table tbody tr.table-row--selected > td:last-child {
-  border-right-color: #4c92d9 !important;
+  border-right-color: var(--theme-primary) !important;
   border-right-width: 1px !important;
 }
 
@@ -2645,4 +3137,90 @@
   color: #6b7280;
   font-size: 11px;
   font-weight: 400;
+}
+
+/* ---------------------------------------------------------------------------
+   Design 2 (WBS hierarchical tree)
+   Declared last so it wins over the shared selection/hover rules above, which
+   set `z-index: 3` and white first-column backgrounds on selected rows.
+   --------------------------------------------------------------------------- */
+
+.budget-table-shell .table.budget-table--wbs-tree th:first-child,
+.budget-table-shell .table.budget-table--wbs-tree td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 5 !important;
+  box-shadow: 2px 0 0 #c9c9c9 !important;
+}
+
+.budget-table-shell .table.budget-table--wbs-tree thead th:first-child {
+  z-index: 8 !important;
+  background: #ffffff !important;
+}
+
+/* Parent WBS rows keep the Costpoint light purple fill. The :not() guards keep
+   hover from outranking the selected-row fill below. */
+.budget-table-shell
+  .table.budget-table--wbs-tree
+  tbody
+  tr.wbs-tree__row--wbs:not(.is-selected)
+  > td,
+.budget-table-shell
+  .table.budget-table--wbs-tree
+  tbody
+  tr.wbs-tree__row--wbs:not(.is-selected):hover
+  > td {
+  background: #e7e7f6 !important;
+}
+
+/* Bud/EAC attribute rows read as detail lines, so they stay white. */
+.budget-table-shell
+  .table.budget-table--wbs-tree
+  tbody
+  tr.wbs-tree__row--leaf:not(.is-selected)
+  > td,
+.budget-table-shell
+  .table.budget-table--wbs-tree
+  tbody
+  tr.wbs-tree__row--leaf:not(.is-selected):hover
+  > td {
+  background: #ffffff !important;
+}
+
+.budget-table-shell .table.budget-table--wbs-tree tbody tr.wbs-tree__row--wbs > td:first-child {
+  box-shadow: 2px 0 0 #c9c9c9 !important;
+}
+
+/* Rolled-up WBS values read as emphasis, not links, so they stay in body text
+   colour — blue is reserved for interactive elements. */
+.budget-table-shell
+  .table.budget-table--wbs-tree
+  tbody
+  tr.wbs-tree__row--wbs
+  > td:not(:first-child) {
+  color: var(--text-primary) !important;
+  font-weight: var(--font-semibold) !important;
+}
+
+.budget-table-shell .table.budget-table--wbs-tree tbody tr.is-selected > td,
+.budget-table-shell .table.budget-table--wbs-tree tbody tr.table-row--selected > td,
+.budget-table-shell .table.budget-table--wbs-tree tbody tr.is-selected > td:first-child,
+.budget-table-shell
+  .table.budget-table--wbs-tree
+  tbody
+  tr.table-row--selected
+  > td:first-child {
+  background: var(--alert-chip-disabled-bg) !important;
+  border-top-color: var(--theme-primary) !important;
+  border-bottom-color: var(--theme-primary) !important;
+  z-index: auto !important;
+}
+
+.budget-table-shell .table.budget-table--wbs-tree tbody tr.is-selected > td:first-child,
+.budget-table-shell
+  .table.budget-table--wbs-tree
+  tbody
+  tr.table-row--selected
+  > td:first-child {
+  z-index: 5 !important;
 }
