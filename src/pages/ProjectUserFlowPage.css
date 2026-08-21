@@ -3340,6 +3340,12 @@ td.budget-table__num.wbs-health--over {
   /* `contain: inline-size` would clamp the pane to the flex basis and fight the
      dragged width. */
   contain: none !important;
+  /* The shared shell reserves a band of bottom padding for its scrollbar, but
+     sticky `bottom: 0` anchors above that band — so rows scrolled behind the
+     totals row stayed visible in the gap underneath it. The gutter already
+     reserves the scrollbar space. */
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .wbs-split__pane--frozen.budget-table-shell {
@@ -3368,9 +3374,6 @@ td.budget-table__num.wbs-health--over {
   width: 4px;
   min-width: 4px;
   align-self: stretch;
-  /* Stops the rule short of the space the panes reserve for their scrollbars,
-     so it ends flush with the bottom of the table rather than hanging past it. */
-  margin-bottom: 12px;
   background: #8f9bab;
   cursor: col-resize;
   touch-action: none;
