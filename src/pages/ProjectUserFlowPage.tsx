@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import { Alert } from '../components/harmony/Alert'
-import { Badge } from '../components/harmony/Badge'
-import type { BadgeVariant } from '../components/harmony/Badge'
 import { Button } from '../components/harmony/Button'
 import { ButtonGroup } from '../components/harmony/ButtonGroup'
 import { Checkbox } from '../components/harmony/Checkbox'
@@ -32,12 +30,31 @@ const CREATE_BUDGET_SEGMENTS = [
 
 const PROJECT_CREATED_MESSAGE = 'Project Budget/EAC created'
 
+/* The hierarchical tree is the design we are taking forward, so it leads the
+   list; the earlier ideas stay selectable for comparison but are marked as
+   ignored. */
 const WBS_DESIGN_VERSIONS = [
+  { value: 'v2', label: 'Project Hierarchical Tree' },
+  { value: 'v3', label: 'Project integrated in Bud' },
   { value: 'v1', label: 'V1 — Grouped columns' },
-  { value: 'v2', label: 'V2 — Hierarchical tree' },
 ] as const
 
 type WbsDesignVersion = (typeof WBS_DESIGN_VERSIONS)[number]['value']
+
+const DEFAULT_WBS_DESIGN_VERSION: WbsDesignVersion = 'v2'
+
+const WBS_DESIGN_ACTIVE_VALUES = new Set<WbsDesignVersion>(['v2', 'v3'])
+
+/* Positional slots, so this must stay in step with WBS_DESIGN_VERSIONS. A null
+   slot falls back to the plain option label. */
+const WBS_DESIGN_OPTION_SLOTS = WBS_DESIGN_VERSIONS.map((option) =>
+  WBS_DESIGN_ACTIVE_VALUES.has(option.value) ? null : (
+    <span className="budget-header-version__ignored">
+      <s>{option.label}</s>
+      <span className="budget-header-version__ignored-note">(ignore)</span>
+    </span>
+  ),
+)
 
 type ResizableColumn = { key: string; label: string; width: number }
 
@@ -104,27 +121,73 @@ const WBS_TREE_COLUMN_GROUPS = [
 const WBS_TREE_COLUMNS: WbsColumnDef[] = [
   { key: 'tree', label: 'WBS', group: 'lead', width: 320 },
   { key: 'version', label: 'Version', group: 'shared', width: 92 },
+  { key: 'versionType', label: 'Version Type', group: 'shared', width: 108 },
   { key: 'status', label: 'Status', group: 'shared', width: 104 },
-  { key: 'amount', label: 'Amount', group: 'shared', width: 132, num: true },
+  { key: 'closedPeriod', label: 'Closed Period', group: 'shared', width: 120 },
+  { key: 'startDate', label: 'Start Date', group: 'shared', width: 112 },
+  { key: 'endDate', label: 'End Date', group: 'shared', width: 112 },
   { key: 'fundedRevenue', label: 'Funded Revenue', group: 'wbs', width: 130, num: true, sortable: true },
   { key: 'budgetedRevenue', label: 'Budgeted Revenue', group: 'wbs', width: 134, num: true },
   { key: 'contractValue', label: 'Contract Value', group: 'wbs', width: 134, num: true, sortable: true },
-  { key: 'closedPeriod', label: 'Closed Period', group: 'wbs', width: 120 },
-  { key: 'startDate', label: 'Start Date', group: 'wbs', width: 112 },
-  { key: 'endDate', label: 'End Date', group: 'wbs', width: 112 },
-  { key: 'variance', label: 'Variance', group: 'shared', width: 134, num: true },
   { key: 'revenue', label: 'Budget Revenue', group: 'detail', width: 136, num: true },
   { key: 'cost', label: 'Budget Cost', group: 'detail', width: 126, num: true },
   { key: 'etc', label: 'ETC', group: 'detail', width: 126, num: true },
+  { key: 'variance', label: 'Variance', group: 'shared', width: 134, num: true },
   { key: 'variancePct', label: 'Variance %', group: 'detail', width: 116, num: true },
   { key: 'actualCostItd', label: 'Actual Cost ITD', group: 'detail', width: 134, num: true },
 ]
+
+/* V3 splits the WBS id and its name apart; the other tree designs keep both in
+   the WBS cell. Inserted right after the WBS column when active. */
+const WBS_TREE_NAME_COLUMN: WbsColumnDef = {
+  key: 'name',
+  label: 'Name',
+  group: 'lead',
+  width: 168,
+}
+
+/** With the name in its own column the WBS cell holds the id, type, and elbow. */
+const WBS_TREE_SPLIT_LEAD_WIDTH = 252
+
+/* Pinned to the left edge alongside the WBS column, so they stay put while the
+   remaining columns scroll horizontally. Order must match WBS_TREE_COLUMNS. */
+const WBS_TREE_FROZEN_KEYS = [
+  'tree',
+  'name',
+  'version',
+  'versionType',
+  'status',
+  'closedPeriod',
+  'startDate',
+  'endDate',
+] as const
+
+type WbsFrozenKey = (typeof WBS_TREE_FROZEN_KEYS)[number]
+
+/** Which half of the split tree table a cell belongs to. */
+type WbsPane = 'frozen' | 'scroll'
+
+/** Squeezing past this just hides columns behind the pane's own scrollbar. */
+const MIN_FROZEN_PANE_WIDTH = 120
+
+/** The frozen pane defaults to showing everything up to and including this column. */
+const FROZEN_PANE_DEFAULT_LAST_KEY = 'status'
 
 const WBS_TREE_GROUP_START_KEYS = new Set(
   WBS_TREE_COLUMN_GROUPS.map(
     (group) => WBS_TREE_COLUMNS.find((column) => column.group === group.key)?.key,
   ).filter((key): key is string => Boolean(key)),
 )
+
+/* Attribute ownership per the Costpoint field spec. Project/contract-level fields
+   belong to a WBS row; every remaining column is a Budget/EAC field and is blank
+   on WBS rows. Every column carries a value on exactly one of the two row kinds,
+   so no column is blank on both. */
+const WBS_ROW_ATTRIBUTE_KEYS = new Set([
+  'fundedRevenue',
+  'budgetedRevenue',
+  'contractValue',
+])
 
 /* Totals are rendered under their own column, so only currency columns roll up.
    Percentages and level counters are intentionally excluded. */
@@ -733,12 +796,20 @@ function buildWbsTreeLeafData(
   type: 'budget' | 'eac',
 ): Record<string, WbsCellData> {
   const status = resolveWbsLeafStatus(wbsId, type, rowData)
+  /* Version Type, Closed Period and the period dates are Budget/EAC fields, so
+     they are carried on the leaf rows rather than the WBS row. */
+  const shared = {
+    status: { display: status, sort: 0 },
+    closedPeriod: rowData.closedPeriod,
+    startDate: rowData.startDate,
+    endDate: rowData.endDate,
+  }
 
   if (type === 'budget') {
     return {
+      ...shared,
       version: rowData.budgetVersion,
-      status: { display: status, sort: 0 },
-      amount: rowData.budgetAmount,
+      versionType: { display: 'Bud', sort: 0 },
       variance: rowData.budgetVariance,
       revenue: rowData.budgetRevenue,
       cost: rowData.budgetCost,
@@ -748,9 +819,9 @@ function buildWbsTreeLeafData(
   const eacExists = rowData.eacExists.display === 'Yes'
   const empty = { display: '', sort: 0 }
   return {
+    ...shared,
     version: eacExists ? rowData.eacVersion : empty,
-    status: { display: status, sort: 0 },
-    amount: eacExists ? rowData.currentEacAmount : empty,
+    versionType: { display: 'EAC', sort: 0 },
     variance: eacExists ? rowData.costVariance : empty,
     etc: eacExists ? rowData.etc : empty,
     variancePct: eacExists ? rowData.variancePct : empty,
@@ -758,17 +829,20 @@ function buildWbsTreeLeafData(
   }
 }
 
-function buildWbsTreeSummaryData(
+/* V3 folds the Bud line onto the WBS row instead of giving it a child, so that
+   row has to carry its own WBS attributes *and* the Budget values V2 shows on
+   the Bud row. EAC fields are deliberately left out — they stay on the EAC
+   child row exactly as in V2. */
+function buildWbsTreeBudgetOnWbsData(
+  wbsId: string,
   rowData: Record<string, WbsCellData>,
 ): Record<string, WbsCellData> {
-  const budgetAmount = rowData.budgetAmount.sort
-  const eacAmount = rowData.eacExists.display === 'Yes' ? rowData.currentEacAmount.sort : 0
-  const totalAmount = budgetAmount + eacAmount
-
-  return {
-    ...rowData,
-    amount: { display: formatCurrency(totalAmount), sort: totalAmount },
-  }
+  const merged = buildWbsTreeLeafData(wbsId, rowData, 'budget')
+  WBS_ROW_ATTRIBUTE_KEYS.forEach((key) => {
+    const cell = rowData[key]
+    if (cell) merged[key] = cell
+  })
+  return merged
 }
 
 function healthModifierFor(level: WbsHealthLevel) {
@@ -776,33 +850,29 @@ function healthModifierFor(level: WbsHealthLevel) {
   return level === 'At Risk' ? 'wbs-health--warn' : 'wbs-health--over'
 }
 
-const WBS_STATUS_BADGE_VARIANTS: Record<string, BadgeVariant> = {
-  Working: 'warning',
-  Incomplete: 'error',
-  Complete: 'success',
-  Approved: 'success',
-  Final: 'success',
-  'Not Created': 'disabled',
+/* Status fills live on the cell itself; Harmony pills are not available here.
+   Tones follow the four-way status colour code: approved/good, complete/done,
+   working/in-progress, incomplete/pending. */
+const WBS_STATUS_CELL_TONES: Record<string, string> = {
+  Approved: 'approved',
+  Complete: 'complete',
+  Final: 'complete',
+  Working: 'working',
+  Incomplete: 'incomplete',
+  'Not Created': 'incomplete',
 }
 
 const WBS_STATUS_KEYS = new Set(['status', 'budgetStatus', 'eacStatus'])
 
-function renderStatusCellContent(display: string) {
-  if (!display || display === '—') return null
-  const variant = WBS_STATUS_BADGE_VARIANTS[display]
-  if (!variant) return display
-  const className =
-    display === 'Final' ? 'budget-status-pill budget-status-pill--final' : 'budget-status-pill'
-  return (
-    <Badge variant={variant} size="medium" className={className}>
-      {display}
-    </Badge>
-  )
+function statusCellClass(display: string | undefined, isStatus: boolean) {
+  if (!isStatus || !display || display === '—') return ''
+  const tone = WBS_STATUS_CELL_TONES[display]
+  return tone ? `budget-status-cell budget-status-cell--${tone}` : ''
 }
 
-function renderWbsCellDisplay(display: string | undefined, isStatus: boolean) {
+function renderWbsCellDisplay(display: string | undefined) {
   if (!display || display === '—') return null
-  return isStatus ? renderStatusCellContent(display) : display
+  return display
 }
 
 type BudgetTableColumn = string
@@ -918,8 +988,11 @@ export function ProjectUserFlowPage() {
     column: WbsSortColumn
     direction: 'asc' | 'desc'
   } | null>(null)
-  const [wbsDesignVersion, setWbsDesignVersion] = useState<WbsDesignVersion>('v1')
+  const [wbsDesignVersion, setWbsDesignVersion] = useState<WbsDesignVersion>(
+    DEFAULT_WBS_DESIGN_VERSION,
+  )
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({})
+  const [frozenPaneDragWidth, setFrozenPaneDragWidth] = useState<number | null>(null)
   // Default: only the first tree root shows Bud/EAC. A later expand replaces it,
   // so the open pair is always either the first root or the last one expanded.
   const [expandedWbsNodes, setExpandedWbsNodes] = useState<string[]>(() => {
@@ -1161,8 +1234,6 @@ export function ProjectUserFlowPage() {
 
     PROJECT_WBS_ROWS.forEach((row) => {
       const data = computeWbsRowData(row, WBS_NEUTRAL_CONTEXT)
-      const eacAmount =
-        data.eacExists.display === 'Yes' ? data.currentEacAmount.sort : 0
 
       add('fundedRevenue', data.fundedRevenue.sort)
       add('contractValue', data.contractValue.sort)
@@ -1174,7 +1245,6 @@ export function ProjectUserFlowPage() {
       add('etc', data.etc.sort)
       add('costVariance', data.costVariance.sort)
       add('actualCostItd', data.actualCostItd.sort)
-      add('amount', data.budgetAmount.sort + eacAmount)
       add('revenue', data.budgetRevenue.sort)
       add('cost', data.budgetCost.sort)
       add('variance', data.costVariance.sort)
@@ -1266,7 +1336,28 @@ export function ProjectUserFlowPage() {
     </>
   )
 
-  const activeWbsColumns = wbsDesignVersion === 'v2' ? WBS_TREE_COLUMNS : WBS_GRID_COLUMNS
+  const isWbsTreeVersion = wbsDesignVersion === 'v2' || wbsDesignVersion === 'v3'
+
+  /* V3 only: the name moves out of the WBS cell into its own column, which also
+     lets the WBS column shrink to the id plus the Bud/EAC label. */
+  const splitWbsName = wbsDesignVersion === 'v3'
+
+  /* V3 leans on the elbow connector to tie a WBS row to its EAC, so the risk
+     callout would only compete with it. */
+  const riskTagEnabled = wbsDesignVersion !== 'v3'
+  const treeColumns: WbsColumnDef[] = splitWbsName
+    ? WBS_TREE_COLUMNS.flatMap((column) =>
+        column.key === 'tree'
+          ? [{ ...column, width: WBS_TREE_SPLIT_LEAD_WIDTH }, WBS_TREE_NAME_COLUMN]
+          : [column],
+      )
+    : WBS_TREE_COLUMNS
+
+  const activeWbsColumns = isWbsTreeVersion ? treeColumns : WBS_GRID_COLUMNS
+
+  const wbsTreeTableClass = `budget-table budget-table--wbs budget-table--wbs-tree budget-table--resizable${
+    splitWbsName ? ' budget-table--wbs-tree-split' : ''
+  }`
 
   const columnWidthFor = (column: ResizableColumn) =>
     columnWidths[`${wbsDesignVersion}:${column.key}`] ?? column.width
@@ -1336,6 +1427,63 @@ export function ProjectUserFlowPage() {
 
   const columnByKey = (key: string) =>
     activeWbsColumns.find((column) => column.key === key) ?? activeWbsColumns[0]
+
+  /* The tree table is rendered as two independently scrolling panes: the frozen
+     pane holds WBS plus the Version → Closed Period columns, the scroll pane
+     holds the rest. */
+  const wbsPaneColumns = (pane: WbsPane, options?: { withoutLead?: boolean }) =>
+    treeColumns.filter((column) => {
+      if (options?.withoutLead && column.group === 'lead') return false
+      return WBS_TREE_FROZEN_KEYS.includes(column.key as WbsFrozenKey) === (pane === 'frozen')
+    })
+
+  const wbsPaneWidth = (pane: WbsPane) =>
+    wbsPaneColumns(pane).reduce((total, column) => total + columnWidthFor(column), 0)
+
+  const frozenPaneNaturalWidth = isWbsTreeVersion ? wbsPaneWidth('frozen') : 0
+
+  /* Out of the box the pane is only wide enough for WBS → Status; Closed Period
+     and anything else added later sit behind the pane's own scrollbar. */
+  const frozenPaneDefaultWidth = (() => {
+    let total = 0
+    for (const column of wbsPaneColumns('frozen')) {
+      total += columnWidthFor(column)
+      if (column.key === FROZEN_PANE_DEFAULT_LAST_KEY) break
+    }
+    return total
+  })()
+
+  /* null means "use the default"; a number is a user-dragged width, which the
+     pane scrolls within when squeezed below its natural size. */
+  const frozenPaneWidth = Math.min(
+    frozenPaneDragWidth ?? frozenPaneDefaultWidth,
+    frozenPaneNaturalWidth,
+  )
+
+  const startFrozenPaneResize = (event: ReactPointerEvent<HTMLSpanElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const startX = event.clientX
+    const startWidth = frozenPaneWidth
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const next = startWidth + moveEvent.clientX - startX
+      setFrozenPaneDragWidth(
+        Math.min(Math.max(MIN_FROZEN_PANE_WIDTH, next), frozenPaneNaturalWidth),
+      )
+    }
+
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      document.body.classList.remove('is-column-resizing')
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    document.body.classList.add('is-column-resizing')
+  }
 
   const sortableTh = (
     column: WbsSortColumn,
@@ -1425,16 +1573,24 @@ export function ProjectUserFlowPage() {
   const setAllWbsNodesExpanded = (expanded: boolean) =>
     setExpandedWbsNodes(expanded ? PROJECT_WBS_ROWS.map((row) => row.id) : [])
 
-  const wbsTreeHeader = (
+  const wbsTreeHeaderFor = (pane: WbsPane) => (
     <>
-      {wbsColgroup}
+      <colgroup>
+        {wbsPaneColumns(pane).map((column) => (
+          <col key={column.key} style={{ width: `${columnWidthFor(column)}px` }} />
+        ))}
+      </colgroup>
       <thead>
         <tr>
-          <th scope="col" className="wbs-tree__head-cell">
-            WBS
-            {columnResizeHandle(columnByKey('tree'))}
-          </th>
-          {WBS_TREE_COLUMNS.filter((column) => column.group !== 'lead').map((column) => {
+          {wbsPaneColumns(pane).map((column) => {
+            if (column.key === 'tree') {
+              return (
+                <th key={column.key} scope="col" className="wbs-tree__head-cell">
+                  WBS
+                  {columnResizeHandle(column)}
+                </th>
+              )
+            }
             const groupStart = WBS_TREE_GROUP_START_KEYS.has(column.key)
             if (column.sortable) {
               return sortableTh(column.key, column.label, {
@@ -1447,7 +1603,10 @@ export function ProjectUserFlowPage() {
                 key={column.key}
                 scope="col"
                 className={
-                  [column.num ? 'budget-table__num' : '', groupStart ? 'budget-table__group-start' : '']
+                  [
+                    column.num ? 'budget-table__num' : '',
+                    groupStart ? 'budget-table__group-start' : '',
+                  ]
                     .filter(Boolean)
                     .join(' ') || undefined
                 }
@@ -1465,31 +1624,46 @@ export function ProjectUserFlowPage() {
   const renderWbsTreeCells = (
     rowData: Record<string, WbsCellData>,
     toneModifier: string,
-    visibleGroups: WbsColumnGroup[],
+    rowKind: 'wbs' | 'wbsWithBudget' | 'budEac',
+    pane: WbsPane,
   ) =>
-    WBS_TREE_COLUMNS.filter((column) => column.group !== 'lead').map((column) => {
-      const inVisibleGroup = visibleGroups.includes(column.group)
-      const data = inVisibleGroup ? rowData[column.key] : undefined
+    wbsPaneColumns(pane, { withoutLead: true }).map((column) => {
+      const isWbsAttribute = WBS_ROW_ATTRIBUTE_KEYS.has(column.key)
+      /* 'wbsWithBudget' owns both halves, so every column draws from rowData and
+         anything absent there (the EAC-only fields) simply stays blank. */
+      const belongsToRow =
+        rowKind === 'wbsWithBudget'
+          ? true
+          : rowKind === 'wbs'
+          ? isWbsAttribute
+          : !isWbsAttribute
+      const data = belongsToRow ? rowData[column.key] : undefined
       const tone =
-        inVisibleGroup && WBS_TREE_VARIANCE_TONE_KEYS.has(column.key) ? toneModifier : ''
+        belongsToRow && WBS_TREE_VARIANCE_TONE_KEYS.has(column.key) ? toneModifier : ''
       const className =
         [
           column.num ? 'budget-table__num' : '',
           WBS_TREE_GROUP_START_KEYS.has(column.key) ? 'budget-table__group-start' : '',
           tone,
+          statusCellClass(data?.display, WBS_STATUS_KEYS.has(column.key)),
         ]
           .filter(Boolean)
           .join(' ') || undefined
       return (
         <td key={column.key} className={className}>
-          {renderWbsCellDisplay(data?.display, WBS_STATUS_KEYS.has(column.key))}
+          {renderWbsCellDisplay(data?.display)}
         </td>
       )
     })
 
   const highlightedWbsRowKey = activeWbsRowKey ?? selectedWbsId
 
-  const renderWbsTreeRows = (node: WbsTreeNode): ReactNode[] => {
+  const renderWbsTreeRows = (
+    node: WbsTreeNode,
+    /* Mutated across the render pass so only the topmost EAC row is flagged. */
+    riskFlag: { firstEacTagged: boolean },
+    pane: WbsPane,
+  ): ReactNode[] => {
     const rows: ReactNode[] = []
     const isExpanded = expandedWbsNodes.includes(node.row.id)
     const isSelected = node.row.id === highlightedWbsRowKey
@@ -1506,8 +1680,19 @@ export function ProjectUserFlowPage() {
       eacStatus,
     }
     const rowData = computeWbsRowData(node.row, ctx)
-    const summaryData = buildWbsTreeSummaryData(rowData)
+    // V3 folds Bud onto the WBS row (only EAC stays a child).
+    const budgetOnWbs = wbsDesignVersion === 'v3'
     const modifier = healthModifierFor(computeWbsHealth(node.row).level)
+    const leafKinds: ReadonlyArray<{
+      key: 'bud' | 'eac'
+      label: string
+      type: 'budget' | 'eac'
+    }> = budgetOnWbs
+      ? [{ key: 'eac', label: 'EAC', type: 'eac' }]
+      : [
+          { key: 'bud', label: 'Bud', type: 'budget' },
+          { key: 'eac', label: 'EAC', type: 'eac' },
+        ]
 
     rows.push(
       <tr
@@ -1530,36 +1715,53 @@ export function ProjectUserFlowPage() {
           }
         }}
       >
-        <td className="wbs-tree__cell" style={{ paddingLeft: `${8 + node.depth * 22}px` }}>
+        {pane === 'scroll' ? null : (
+        <td className="wbs-tree__cell">
           <span className="wbs-tree__cell-inner">
-            <button
-              type="button"
-              className="wbs-tree__toggle"
-              aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? 'Hide' : 'Show'} Bud and EAC for ${node.row.id}`}
-              onClick={(event) => {
-                event.stopPropagation()
-                toggleWbsNode(node.row.id)
-              }}
-            >
-              <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size="sm" />
-            </button>
-            <span className="wbs-tree__id">{node.row.id}</span>
-            <span className="wbs-tree__name">{node.row.name}</span>
+            {/* Every WBS id sits at the same indent — the dotted id already
+                carries the level, so the tree does not step them in. */}
+            <span className="wbs-tree__lead">
+              <button
+                type="button"
+                className="wbs-tree__toggle"
+                aria-expanded={isExpanded}
+                aria-label={`${isExpanded ? 'Hide' : 'Show'} ${budgetOnWbs ? 'EAC' : 'Bud and EAC'} for ${node.row.id}`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  toggleWbsNode(node.row.id)
+                }}
+              >
+                <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size="sm" />
+              </button>
+              <span className="wbs-tree__id">{node.row.id}</span>
+              {splitWbsName ? null : (
+                <span className="wbs-tree__name">{node.row.name}</span>
+              )}
+            </span>
+            {budgetOnWbs ? (
+              <span className="wbs-tree__leaf-label">Bud</span>
+            ) : null}
           </span>
         </td>
-        {renderWbsTreeCells(summaryData, modifier, ['wbs', 'shared'])}
+        )}
+        {pane === 'frozen' && splitWbsName ? (
+          <td className="wbs-tree__cell wbs-tree__name-cell">{node.row.name}</td>
+        ) : null}
+        {renderWbsTreeCells(
+          budgetOnWbs ? buildWbsTreeBudgetOnWbsData(node.row.id, rowData) : rowData,
+          modifier,
+          budgetOnWbs ? 'wbsWithBudget' : 'wbs',
+          pane,
+        )}
       </tr>,
     )
 
     if (isExpanded) {
-      ;(
-        [
-          { key: 'bud', label: 'Bud', type: 'budget' as const },
-          { key: 'eac', label: 'EAC', type: 'eac' as const },
-        ] as const
-      ).forEach((leaf) => {
+      leafKinds.forEach((leaf) => {
         const isLeafSelected = highlightedWbsRowKey === `${node.row.id}::${leaf.key}`
+        const showRiskTag =
+          riskTagEnabled && leaf.key === 'eac' && !riskFlag.firstEacTagged
+        if (showRiskTag) riskFlag.firstEacTagged = true
         rows.push(
           <tr
             key={`${node.row.id}-${leaf.key}`}
@@ -1577,42 +1779,73 @@ export function ProjectUserFlowPage() {
               }
             }}
           >
-            <td
-              className="wbs-tree__cell wbs-tree__cell--leaf"
-              style={{ paddingLeft: `${8 + node.depth * 22}px` }}
-            >
-              <span className="wbs-tree__cell-inner">
-                <span className="wbs-tree__toggle-spacer" aria-hidden="true" />
-                <span className="wbs-tree__leaf-label">{leaf.label}</span>
-              </span>
-            </td>
-            {renderWbsTreeCells(buildWbsTreeLeafData(node.row.id, rowData, leaf.type), modifier, [
-              'shared',
-              'detail',
-            ])}
+            {pane === 'scroll' ? null : (
+              <td className="wbs-tree__cell wbs-tree__cell--leaf">
+                <span className="wbs-tree__cell-inner">
+                  <span className="wbs-tree__lead">
+                    <span className="wbs-tree__toggle-spacer" aria-hidden="true" />
+                    {budgetOnWbs ? (
+                      <span className="wbs-tree__elbow" aria-hidden="true" />
+                    ) : (
+                      <>
+                        <span className="wbs-tree__leaf-label">{leaf.label}</span>
+                        {showRiskTag ? (
+                          <span className="wbs-tree__leaf-risk">(At Risk)</span>
+                        ) : null}
+                      </>
+                    )}
+                  </span>
+                  {budgetOnWbs ? (
+                    <span className="wbs-tree__leaf-label">{leaf.label}</span>
+                  ) : null}
+                </span>
+              </td>
+            )}
+            {pane === 'frozen' && splitWbsName ? (
+              <td className="wbs-tree__cell wbs-tree__name-cell" />
+            ) : null}
+            {renderWbsTreeCells(
+              buildWbsTreeLeafData(node.row.id, rowData, leaf.type),
+              modifier,
+              'budEac',
+              pane,
+            )}
           </tr>,
         )
       })
     }
 
     // Child WBS rows stay visible regardless of expansion — the toggle only shows or
-    // hides this row's own Bud/EAC pair.
+    // hides this row's own attribute line(s) (Bud/EAC in V2, EAC only in V3).
     node.children.forEach((child) => {
-      rows.push(...renderWbsTreeRows(child))
+      rows.push(...renderWbsTreeRows(child, riskFlag, pane))
     })
 
     return rows
   }
 
-  const wbsTreeBody = (
-    <tbody>
-      {wbsTree.flatMap((node) => renderWbsTreeRows(node))}
-      <tr className="table-row--total budget-table__totals-row">
-        <td className="wbs-tree__cell budget-table__totals-label">Total</td>
-        {renderWbsTotalCells(WBS_TREE_COLUMNS, WBS_TREE_GROUP_START_KEYS)}
-      </tr>
-    </tbody>
-  )
+  /* Each pane renders the same row sequence, so the risk flag is tracked per
+     pass rather than shared between them. */
+  const wbsTreeBodyFor = (pane: WbsPane) => {
+    const riskFlag = { firstEacTagged: false }
+    return (
+      <tbody>
+        {wbsTree.flatMap((node) => renderWbsTreeRows(node, riskFlag, pane))}
+        <tr className="table-row--total budget-table__totals-row">
+          {pane === 'scroll' ? null : (
+            <td className="wbs-tree__cell budget-table__totals-label">Total</td>
+          )}
+          {pane === 'frozen' && splitWbsName ? (
+            <td className="wbs-tree__cell wbs-tree__name-cell" />
+          ) : null}
+          {renderWbsTotalCells(
+            wbsPaneColumns(pane, { withoutLead: true }),
+            WBS_TREE_GROUP_START_KEYS,
+          )}
+        </tr>
+      </tbody>
+    )
+  }
 
   const tableHeader = isWbsStep ? (
     wbsGroupedHeader
@@ -1779,6 +2012,7 @@ export function ProjectUserFlowPage() {
                       column.num ? 'budget-table__num' : '',
                       groupStart ? 'budget-table__group-start' : '',
                       toneClass,
+                      statusCellClass(data?.display, WBS_STATUS_KEYS.has(column.key)),
                     ]
                       .filter(Boolean)
                       .join(' ') || undefined
@@ -1791,7 +2025,7 @@ export function ProjectUserFlowPage() {
                         selectWbsCell(row.id, column.key)
                       }}
                     >
-                      {renderWbsCellDisplay(data?.display, WBS_STATUS_KEYS.has(column.key))}
+                      {renderWbsCellDisplay(data?.display)}
                     </td>
                   )
                 })}
@@ -2012,8 +2246,9 @@ export function ProjectUserFlowPage() {
           <Dropdown
             className="budget-header-version"
             options={WBS_DESIGN_VERSIONS.map((option) => ({ ...option }))}
+            optionSlots={WBS_DESIGN_OPTION_SLOTS}
             value={wbsDesignVersion}
-            triggerFixedWidth="13rem"
+            triggerFixedWidth="16.5rem"
             onChange={(value) => setWbsDesignVersion(value as WbsDesignVersion)}
           />
         </div>
@@ -2186,20 +2421,20 @@ export function ProjectUserFlowPage() {
               </div>
             ) : isWbsStep ? (
               <div className="budget-toolbar__group">
-                {wbsDesignVersion === 'v2' ? (
+                {isWbsTreeVersion ? (
                   <>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="budget-toolbar__action"
+                      variant="secondary"
+                      className="budget-toolbar__secondary"
                       onClick={() => setAllWbsNodesExpanded(true)}
                     >
                       Expand all
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="budget-toolbar__action"
+                      variant="secondary"
+                      className="budget-toolbar__secondary"
                       onClick={() => setAllWbsNodesExpanded(false)}
                     >
                       Collapse all
@@ -2270,17 +2505,48 @@ export function ProjectUserFlowPage() {
                 />
               </div>
             </div>
-          ) : isWbsStep && wbsDesignVersion === 'v2' ? (
+          ) : isWbsStep && isWbsTreeVersion ? (
             <div
-              className="budget-table-shell budget-table-shell--scroll"
-              style={{ '--wbs-table-width': `${wbsTableWidth}px` } as CSSProperties}
+              className="wbs-split"
+              role="group"
+              aria-label="WBS budget table"
             >
-              <Table
-                className="budget-table budget-table--wbs budget-table--wbs-tree budget-table--resizable"
-                headerVariant="gray"
-                header={wbsTreeHeader}
-                body={wbsTreeBody}
+              <div
+                className="wbs-split__pane wbs-split__pane--frozen budget-table-shell budget-table-shell--scroll"
+                style={
+                  {
+                    width: `${frozenPaneWidth}px`,
+                    '--wbs-table-width': `${frozenPaneNaturalWidth}px`,
+                  } as CSSProperties
+                }
+              >
+                <Table
+                  className={wbsTreeTableClass}
+                  headerVariant="gray"
+                  header={wbsTreeHeaderFor('frozen')}
+                  body={wbsTreeBodyFor('frozen')}
+                />
+              </div>
+              <span
+                className="wbs-split__gutter"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize the frozen WBS columns"
+                title="Drag to squeeze the frozen columns, double-click to reset"
+                onPointerDown={startFrozenPaneResize}
+                onDoubleClick={() => setFrozenPaneDragWidth(null)}
               />
+              <div
+                className="wbs-split__pane wbs-split__pane--scroll budget-table-shell budget-table-shell--scroll"
+                style={{ '--wbs-table-width': `${wbsPaneWidth('scroll')}px` } as CSSProperties}
+              >
+                <Table
+                  className={wbsTreeTableClass}
+                  headerVariant="gray"
+                  header={wbsTreeHeaderFor('scroll')}
+                  body={wbsTreeBodyFor('scroll')}
+                />
+              </div>
             </div>
           ) : (
             <div

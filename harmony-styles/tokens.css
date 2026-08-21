@@ -365,7 +365,7 @@ html.theme-cp {
 
   /* CP Sidebar Colors (light mode) */
   --cp-sidebar-item-fg: #373f4e;
-  --cp-sidebar-item-hover-bg: rgba(55, 63, 78, 0.08);
+  --cp-sidebar-item-hover-bg: #BEE2EA;
   --cp-sidebar-section-border: #ffffff;
 
   /* Backgrounds */
@@ -523,6 +523,8 @@ html.theme-cp.dark {
   --cp-sidebar-section-border-dark: #4a5568;
   --cp-sidebar-item-fg-dark: #e9ecef;
   --cp-sidebar-item-hover-bg-dark: rgba(255, 255, 255, 0.08);
+  /* The light-mode wash would glare against the dark rail. */
+  --cp-sidebar-item-hover-bg: var(--cp-sidebar-item-hover-bg-dark);
 
   /* Backgrounds */
   --page-bg: #1F252E;

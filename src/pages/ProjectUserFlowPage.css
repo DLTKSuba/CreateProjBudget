@@ -1992,8 +1992,38 @@ body.is-column-resizing {
   background: #eef5fb;
 }
 
+/* The trigger is pinned to 13rem, but the option rows carry an extra "(ignore)"
+   note and wrap without more room. */
+.project-user-flow-shell .budget-header-version .dropdown__menu {
+  min-width: 21rem;
+}
+
+.project-user-flow-shell .budget-header-version .dropdown__item {
+  white-space: nowrap;
+}
+
+/* Superseded design ideas: struck through, with the reason left readable. */
+.budget-header-version__ignored {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.budget-header-version__ignored-note {
+  text-decoration: none;
+  font-style: italic;
+}
+
 .budget-table--wbs-tree .wbs-tree__head-cell {
   min-width: 320px;
+}
+
+/* V3 moves the name into its own column, so the WBS cell only needs room for
+   the id and its Bud label. */
+.budget-table--wbs-tree.budget-table--wbs-tree-split .wbs-tree__head-cell {
+  min-width: 0;
 }
 
 .wbs-tree__cell {
@@ -2004,6 +2034,16 @@ body.is-column-resizing {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+/* Indent lives here so Bud / EAC can sit in a shared column on the right of
+   the WBS cell, independent of tree depth and id length. */
+.wbs-tree__lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -2038,8 +2078,45 @@ body.is-column-resizing {
   color: #1f2733;
 }
 
+.budget-table--wbs-tree-split .wbs-tree__id {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .wbs-tree__name {
   color: #6b7688;
+}
+
+/* L-shaped connector from the WBS id down into the EAC label. Grows across the
+   leftover lead so the turn always meets the Bud / EAC column. The -8px
+   reaches back through the cell padding to meet the row above. */
+.wbs-tree__elbow {
+  position: relative;
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-width: 12px;
+  min-height: 20px;
+}
+
+.wbs-tree__elbow::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: 50%;
+  left: 1px;
+  right: 0;
+  border-left: 1px solid #98a3b3;
+  border-bottom: 1px solid #98a3b3;
+  border-bottom-left-radius: 4px;
+}
+
+/* V3's standalone Name column. */
+.wbs-tree__name-cell {
+  color: #6b7688;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wbs-tree__row--wbs > td {
@@ -2047,8 +2124,14 @@ body.is-column-resizing {
 }
 
 .wbs-tree__row--leaf > td {
-  background: #fff;
+  background: #eef1f6;
   color: #475569;
+}
+
+/* V3 only: EAC sits one step lighter than Bud. V2 keeps Bud and EAC on the
+   same grey. */
+.budget-table--wbs-tree-split .wbs-tree__row--eac > td {
+  background: #f6f7fa;
 }
 
 .wbs-tree__row--wbs,
@@ -2064,6 +2147,8 @@ body.is-column-resizing {
 .wbs-tree__leaf-label {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -2072,30 +2157,30 @@ body.is-column-resizing {
   letter-spacing: 0.04em;
 }
 
-/* Chip fill only — transparent border keeps the Harmony pill metrics intact.
-   Working keeps body text colour; Final/success keep Harmony's green chip text. */
-.budget-status-pill {
-  text-transform: none;
-  border-color: transparent;
+/* Risk callout beside the EAC label. */
+.wbs-tree__leaf-risk {
+  margin-left: 6px;
+  /* CP error text red (#c1253a) — the darker of the system's two reds, so it
+     stays legible on the light gray Bud/EAC row fill. */
+  color: var(--color-error-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
 }
 
-/* Status text stays in body grey on every chip; the fill carries the meaning. */
-.budget-status-pill.badge--warning,
-.budget-status-pill--final.badge--success {
-  color: var(--text-primary);
-}
-
-/* Final uses the light alert green so it stays distinct from the dark green
-   the wizard stepper uses for completed steps. */
-.budget-status-pill--final.badge--success {
-  background-color: var(--color-success-light);
+/* Status is shown as plain cell text over a filled cell (no pills available).
+   The fills themselves live at the end of this file, because they tie on
+   specificity with the Bud/EAC row fills and have to win on source order. */
+.budget-status-cell {
+  color: var(--text-primary) !important;
 }
 
 .budget-table--wbs-tree tbody tr.is-selected > td {
   background: #e8f1fb;
 }
 
-/* Totals use the Harmony light blue total-row fill. */
+/* Totals use the specified yellow fill. */
 .budget-table__totals-row {
   position: sticky;
   bottom: 0;
@@ -2108,8 +2193,7 @@ body.is-column-resizing {
 .budget-table-shell .table tbody tr.budget-table__totals-row > td:first-child,
 .budget-table-shell .table tbody tr.budget-table__totals-row > td.budget-table__lead-col,
 .budget-table-shell .table tbody tr.budget-table__totals-row:hover > td {
-  background: linear-gradient(var(--table-total-bg), var(--table-total-bg)),
-    var(--surface-bg) !important;
+  background: #f0f3be !important;
   color: var(--text-primary) !important;
   border-top: 2px solid var(--theme-primary) !important;
   font-weight: var(--font-normal);
@@ -2798,7 +2882,7 @@ td.budget-table__num.wbs-health--over {
 }
 
 /* Selected / highlighted row — light neutral fill with a Harmony primary blue
-   outline. Light blue is reserved for the totals row. */
+   outline. Yellow is reserved for the totals row. */
 .budget-table-shell .table tbody tr.is-selected,
 .budget-table-shell .table tbody tr.table-row--selected {
   background: var(--alert-chip-disabled-bg) !important;
@@ -3145,18 +3229,8 @@ td.budget-table__num.wbs-health--over {
    set `z-index: 3` and white first-column backgrounds on selected rows.
    --------------------------------------------------------------------------- */
 
-.budget-table-shell .table.budget-table--wbs-tree th:first-child,
-.budget-table-shell .table.budget-table--wbs-tree td:first-child {
-  position: sticky !important;
-  left: 0 !important;
-  z-index: 5 !important;
-  box-shadow: 2px 0 0 #c9c9c9 !important;
-}
-
-.budget-table-shell .table.budget-table--wbs-tree thead th:first-child {
-  z-index: 8 !important;
-  background: #ffffff !important;
-}
+/* The frozen columns live in their own pane (.wbs-split__pane--frozen), so the
+   tree table itself no longer needs sticky cells. */
 
 /* Parent WBS rows keep the Costpoint light purple fill. The :not() guards keep
    hover from outranking the selected-row fill below. */
@@ -3173,23 +3247,45 @@ td.budget-table__num.wbs-health--over {
   background: #e7e7f6 !important;
 }
 
-/* Bud/EAC attribute rows read as detail lines, so they stay white. */
+/* V2's Bud and EAC rows share #eef1f6. The :not() keeps this off V3, which
+   still uses a lighter EAC wash. */
 .budget-table-shell
-  .table.budget-table--wbs-tree
+  .table.budget-table--wbs-tree:not(.budget-table--wbs-tree-split)
   tbody
   tr.wbs-tree__row--leaf:not(.is-selected)
   > td,
 .budget-table-shell
-  .table.budget-table--wbs-tree
+  .table.budget-table--wbs-tree:not(.budget-table--wbs-tree-split)
   tbody
   tr.wbs-tree__row--leaf:not(.is-selected):hover
+  > td,
+.budget-table-shell
+  .table.budget-table--wbs-tree:not(.budget-table--wbs-tree-split)
+  tbody
+  tr.wbs-tree__row--eac:not(.is-selected)
+  > td,
+.budget-table-shell
+  .table.budget-table--wbs-tree:not(.budget-table--wbs-tree-split)
+  tbody
+  tr.wbs-tree__row--eac:not(.is-selected):hover
   > td {
-  background: #ffffff !important;
+  background: #eef1f6 !important;
 }
 
-.budget-table-shell .table.budget-table--wbs-tree tbody tr.wbs-tree__row--wbs > td:first-child {
-  box-shadow: 2px 0 0 #c9c9c9 !important;
+/* V3's EAC stays a lighter wash of that grey. */
+.budget-table-shell
+  .table.budget-table--wbs-tree-split
+  tbody
+  tr.wbs-tree__row--eac:not(.is-selected)
+  > td,
+.budget-table-shell
+  .table.budget-table--wbs-tree-split
+  tbody
+  tr.wbs-tree__row--eac:not(.is-selected):hover
+  > td {
+  background: #f6f7fa !important;
 }
+
 
 /* Rolled-up WBS values read as emphasis, not links, so they stay in body text
    colour — blue is reserved for interactive elements. */
@@ -3216,11 +3312,166 @@ td.budget-table__num.wbs-health--over {
   z-index: auto !important;
 }
 
-.budget-table-shell .table.budget-table--wbs-tree tbody tr.is-selected > td:first-child,
+/* ---------------------------------------------------------------------------
+   Split panes for the WBS tree table
+
+   The left pane carries WBS + Version → Closed Period and can be squeezed or
+   minimized; the right pane holds every remaining column. Each pane scrolls
+   horizontally on its own, so row alignment depends on both panes agreeing on
+   header and row heights.
+   --------------------------------------------------------------------------- */
+
+.wbs-split {
+  display: flex;
+  align-items: stretch;
+  flex: 0 1 auto;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.wbs-split__pane.budget-table-shell {
+  align-self: stretch;
+  max-width: none;
+  background: #fff !important;
+  /* `contain: inline-size` would clamp the pane to the flex basis and fight the
+     dragged width. */
+  contain: none !important;
+}
+
+.wbs-split__pane--frozen.budget-table-shell {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+  max-width: 70% !important;
+}
+
+.wbs-split__pane--scroll.budget-table-shell {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.wbs-split__pane .table-wrapper {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* The divider is just a thick rule butted right up against both tables — no
+   filled gutter, so the two halves read as one grid. The negative inset widens
+   the pointer target without widening the line. */
+.wbs-split__gutter {
+  position: relative;
+  flex: 0 0 4px;
+  width: 4px;
+  min-width: 4px;
+  align-self: stretch;
+  /* Stops the rule short of the space the panes reserve for their scrollbars,
+     so it ends flush with the bottom of the table rather than hanging past it. */
+  margin-bottom: 12px;
+  background: #8f9bab;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.wbs-split__gutter::after {
+  content: '';
+  position: absolute;
+  inset: 0 -3px;
+}
+
+.wbs-split__gutter:hover {
+  background: var(--theme-primary);
+}
+
+/* Both panes must agree on these heights or the two halves drift out of line.
+   The values match the shared budget-table row height; they are restated here
+   so a change to one pane's content cannot move only that pane. */
+.wbs-split .table thead th {
+  height: 32px;
+  vertical-align: middle;
+}
+
+.wbs-split .table tbody td {
+  height: 32px;
+  vertical-align: middle;
+}
+
+/* The pane edge already draws a divider, so drop the cell's own left border. */
+.wbs-split__pane--scroll .table th:first-child,
+.wbs-split__pane--scroll .table td:first-child {
+  border-left-width: 0 !important;
+}
+
+/* Row fills are keyed off `td:first-child` elsewhere in this file; in the
+   scroll pane the first cell is an ordinary data cell, so let the row fill win. */
+.wbs-split__pane--scroll .table thead th:first-child {
+  background: #ffffff !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Status cell fills — declared last on purpose
+
+   Status only ever lands on Bud and EAC rows, and those rows paint every cell
+   with an !important fill. The tone class is repeated to out-specify that row
+   fill (and its :hover twin), and the block sits last so source order can't
+   undo it either.
+   --------------------------------------------------------------------------- */
+
+/* Approved / good */
 .budget-table-shell
-  .table.budget-table--wbs-tree
+  .table
   tbody
-  tr.table-row--selected
-  > td:first-child {
-  z-index: 5 !important;
+  tr
+  > td.budget-status-cell--approved.budget-status-cell--approved.budget-status-cell--approved,
+.budget-table-shell
+  .table
+  tbody
+  tr:hover
+  > td.budget-status-cell--approved.budget-status-cell--approved.budget-status-cell--approved {
+  background: #90ee90 !important;
+}
+
+/* Complete / done */
+.budget-table-shell
+  .table
+  tbody
+  tr
+  > td.budget-status-cell--complete.budget-status-cell--complete.budget-status-cell--complete,
+.budget-table-shell
+  .table
+  tbody
+  tr:hover
+  > td.budget-status-cell--complete.budget-status-cell--complete.budget-status-cell--complete {
+  background: #ffff99 !important;
+}
+
+/* Working / in progress */
+.budget-table-shell
+  .table
+  tbody
+  tr
+  > td.budget-status-cell--working.budget-status-cell--working.budget-status-cell--working,
+.budget-table-shell
+  .table
+  tbody
+  tr:hover
+  > td.budget-status-cell--working.budget-status-cell--working.budget-status-cell--working {
+  background: #ffb3ba !important;
+}
+
+/* Incomplete / pending */
+.budget-table-shell
+  .table
+  tbody
+  tr
+  > td.budget-status-cell--incomplete.budget-status-cell--incomplete.budget-status-cell--incomplete,
+.budget-table-shell
+  .table
+  tbody
+  tr:hover
+  > td.budget-status-cell--incomplete.budget-status-cell--incomplete.budget-status-cell--incomplete {
+  background: #e0e0e0 !important;
 }

@@ -5900,6 +5900,13 @@ html.dark .left-sidebar__icon .left-sidebar__custom-icon {
   text-decoration: none;
 }
 
+/* Costpoint rails use the CP hover wash instead of the neutral --hover-bg. The
+   :not() guards leave active items on their primary fill. */
+html.theme-cp .left-sidebar__item:not(.left-sidebar__item--active):not([data-active='true']):hover,
+html.theme-cp .right-sidebar__item:not(.right-sidebar__item--active):not([data-active='true']):hover {
+  background-color: var(--cp-sidebar-item-hover-bg);
+}
+
 .right-sidebar__icon {
   flex-shrink: 0;
   width: 24px;
